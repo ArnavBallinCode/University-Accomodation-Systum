@@ -6,6 +6,7 @@ import { useToast } from "../components/ToastProvider";
 import { ENTITIES } from "../config/entities";
 import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api";
 import { titleCase } from "../lib/utils";
+import { useAuth } from "../providers/AuthProvider";
 import type { DataRow, EntityDefinition, FieldDefinition } from "../types";
 
 type FormValue = string | boolean;
@@ -76,6 +77,7 @@ export function EntityStudioPage(): JSX.Element {
   const [editingRecord, setEditingRecord] = useState<DataRow | null>(null);
   const [form, setForm] = useState<FormState>(() => buildInitialForm(ENTITIES[0]));
   const { pushToast } = useToast();
+  const { canWrite, canDelete, user } = useAuth();
 
   const activeEntity = useMemo(
     () => ENTITIES.find((entry) => entry.key === entityKey) ?? ENTITIES[0],
@@ -142,6 +144,15 @@ export function EntityStudioPage(): JSX.Element {
   };
 
   const handleSubmit = async (): Promise<void> => {
+    if (!canWrite) {
+      pushToast({
+        tone: "error",
+        title: "Read-only role",
+        description: "Viewer accounts cannot create or update records."
+      });
+      return;
+    }
+
     const payload: Record<string, unknown> = {};
 
     for (const field of activeEntity.fields) {
@@ -193,6 +204,15 @@ export function EntityStudioPage(): JSX.Element {
   };
 
   const handleEdit = (record: DataRow): void => {
+    if (!canWrite) {
+      pushToast({
+        tone: "error",
+        title: "Read-only role",
+        description: "Viewer accounts cannot edit records."
+      });
+      return;
+    }
+
     const nextForm = buildInitialForm(activeEntity);
 
     activeEntity.fields.forEach((field) => {
@@ -204,6 +224,15 @@ export function EntityStudioPage(): JSX.Element {
   };
 
   const handleDelete = async (record: DataRow): Promise<void> => {
+    if (!canDelete) {
+      pushToast({
+        tone: "error",
+        title: "Permission denied",
+        description: "Only admin accounts can delete records."
+      });
+      return;
+    }
+
     const recordId = record[activeEntity.idKey];
     if (!window.confirm(`Delete ${activeEntity.label} record ${String(recordId)}?`)) {
       return;
@@ -263,10 +292,15 @@ export function EntityStudioPage(): JSX.Element {
 
         <p className="mb-4 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-slate-600">{activeEntity.description}</p>
 
+        <p className="mb-4 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-600">
+          Access: {user?.role ?? "viewer"} | {canWrite ? "Create + Update enabled" : "Read-only mode"}
+          {canDelete ? " | Delete enabled" : " | Delete disabled"}
+        </p>
+
         <div className="space-y-3">
           {activeEntity.fields.map((field) => {
             const value = form[field.key];
-            const disabled = Boolean(editingRecord) && field.key === activeEntity.idKey;
+            const disabled = !canWrite || (Boolean(editingRecord) && field.key === activeEntity.idKey);
 
             return (
               <label key={field.key} className="block">
@@ -303,6 +337,7 @@ export function EntityStudioPage(): JSX.Element {
                     <input
                       type="checkbox"
                       checked={Boolean(value)}
+                      disabled={disabled}
                       onChange={(event) => handleInputChange(field, event.target.checked)}
                       className="h-4 w-4 rounded border-slate-300"
                     />
@@ -325,11 +360,11 @@ export function EntityStudioPage(): JSX.Element {
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !canWrite}
             onClick={() => {
               void handleSubmit();
             }}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 font-heading text-xs font-black uppercase tracking-[0.15em] text-white shadow-glow disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 font-heading text-xs font-black uppercase tracking-[0.15em] text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {editingRecord ? "Save changes" : "Create record"}
@@ -402,18 +437,20 @@ export function EntityStudioPage(): JSX.Element {
                       <div className="flex gap-2">
                         <button
                           type="button"
+                          disabled={!canWrite}
                           onClick={() => handleEdit(record)}
-                          className="inline-flex items-center gap-1 rounded-full border border-cyan-300 bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-cyan-900"
+                          className="inline-flex items-center gap-1 rounded-full border border-cyan-300 bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-cyan-900 disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
                         </button>
                         <button
                           type="button"
+                          disabled={!canDelete}
                           onClick={() => {
                             void handleDelete(record);
                           }}
-                          className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-rose-900"
+                          className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-rose-900 disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete

@@ -8,7 +8,16 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  skipAuth?: boolean;
+}
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+let authToken: string | null = null;
+
+export function setApiAuthToken(token: string | null): void {
+  authToken = token;
+}
 
 function buildUrl(path: string): string {
   if (!API_BASE) {
@@ -46,13 +55,21 @@ function asErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(path: string, init: ApiRequestOptions = {}): Promise<T> {
+  const { skipAuth = false, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers ?? {});
+
+  if (!(requestInit.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (!skipAuth && authToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${authToken}`);
+  }
+
   const response = await fetch(buildUrl(path), {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers ?? {})
-    }
+    ...requestInit,
+    headers
   });
 
   const payload = await parseResponse(response);
@@ -68,14 +85,14 @@ export function apiGet<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: "GET" });
 }
 
-export function apiPost<T>(path: string, body: unknown): Promise<T> {
-  return apiRequest<T>(path, { method: "POST", body: JSON.stringify(body) });
+export function apiPost<T>(path: string, body: unknown, init: ApiRequestOptions = {}): Promise<T> {
+  return apiRequest<T>(path, { ...init, method: "POST", body: JSON.stringify(body) });
 }
 
-export function apiPut<T>(path: string, body: unknown): Promise<T> {
-  return apiRequest<T>(path, { method: "PUT", body: JSON.stringify(body) });
+export function apiPut<T>(path: string, body: unknown, init: ApiRequestOptions = {}): Promise<T> {
+  return apiRequest<T>(path, { ...init, method: "PUT", body: JSON.stringify(body) });
 }
 
-export function apiDelete(path: string): Promise<void> {
-  return apiRequest<void>(path, { method: "DELETE" });
+export function apiDelete(path: string, init: ApiRequestOptions = {}): Promise<void> {
+  return apiRequest<void>(path, { ...init, method: "DELETE" });
 }

@@ -5,10 +5,31 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --bg-a: #fff8e7;
   --bg-b: #dff9ff;
   --bg-c: #ffe4d0;
   --ink: #132544;
+  --grid-line: rgba(19, 37, 68, 0.1);
+  --panel-border: rgba(255, 255, 255, 0.75);
+  --panel-bg: rgba(255, 255, 255, 0.62);
+  --panel-shadow: 0 12px 40px rgba(17, 24, 39, 0.08);
+  --table-border: rgba(255, 255, 255, 0.8);
+  --table-bg: rgba(255, 255, 255, 0.74);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-a: #0b1220;
+  --bg-b: #111b2f;
+  --bg-c: #0a2a36;
+  --ink: #e2e8f0;
+  --grid-line: rgba(148, 163, 184, 0.1);
+  --panel-border: rgba(148, 163, 184, 0.3);
+  --panel-bg: rgba(15, 23, 42, 0.66);
+  --panel-shadow: 0 16px 42px rgba(2, 6, 23, 0.62);
+  --table-border: rgba(148, 163, 184, 0.3);
+  --table-bg: rgba(15, 23, 42, 0.72);
 }
 
 * {
@@ -25,6 +46,7 @@ body {
     radial-gradient(circle at 90% 12%, #c8fbff 0%, transparent 34%),
     radial-gradient(circle at 60% 92%, #ffc9a8 0%, transparent 40%),
     linear-gradient(128deg, var(--bg-a), var(--bg-b) 42%, var(--bg-c));
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 #root {
@@ -34,22 +56,77 @@ body {
 .grid-sheen {
   opacity: 0.22;
   background-image:
-    linear-gradient(to right, rgba(19, 37, 68, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(19, 37, 68, 0.1) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: radial-gradient(circle at 50% 50%, black 32%, transparent 100%);
 }
 
 .glass-panel {
   border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
   backdrop-filter: blur(14px);
-  box-shadow: 0 12px 40px rgba(17, 24, 39, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 
 .table-shell {
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--table-border);
+  background: var(--table-bg);
+}
+
+:root[data-theme="dark"] .bg-white\/60 {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+}
+
+:root[data-theme="dark"] .bg-white\/70,
+:root[data-theme="dark"] .bg-white\/75 {
+  background-color: rgba(15, 23, 42, 0.62) !important;
+}
+
+:root[data-theme="dark"] .bg-white\/80,
+:root[data-theme="dark"] .bg-white\/85,
+:root[data-theme="dark"] .bg-white\/90 {
+  background-color: rgba(15, 23, 42, 0.72) !important;
+}
+
+:root[data-theme="dark"] .border-white\/40,
+:root[data-theme="dark"] .border-white\/60,
+:root[data-theme="dark"] .border-white\/70,
+:root[data-theme="dark"] .border-white\/75,
+:root[data-theme="dark"] .border-white\/80,
+:root[data-theme="dark"] .border-slate-300,
+:root[data-theme="dark"] .border-slate-300\/70 {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+}
+
+:root[data-theme="dark"] .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+:root[data-theme="dark"] .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] .text-slate-600,
+:root[data-theme="dark"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="dark"] .bg-slate-900 {
+  background-color: #fb923c !important;
+  color: #111827 !important;
+}
+
+:root[data-theme="dark"] .shadow-glow {
+  box-shadow: 0 12px 36px rgba(251, 146, 60, 0.35) !important;
+}
+
+:root[data-theme="dark"] .shadow-mint {
+  box-shadow: 0 12px 36px rgba(34, 211, 238, 0.24) !important;
 }

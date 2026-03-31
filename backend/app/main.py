@@ -5,16 +5,24 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from fastapi import Body, Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import sqltypes
 
+from .auth import (
+    AuthUser,
+    authenticate_user,
+    create_access_token,
+    require_roles,
+    user_profile,
+)
 from .database import get_session, get_table
 
 
@@ -33,6 +41,15 @@ TABLE_CONFIG: dict[str, dict[str, Any]] = {
 
 
 app = FastAPI(title="University Accommodation Office API", version="2.0.0-python")
+
+READ_ROLES = require_roles("admin", "manager", "viewer")
+WRITE_ROLES = require_roles("admin", "manager")
+ADMIN_ROLE = require_roles("admin")
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,6 +81,29 @@ def index() -> Any:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "uni-accom-api-python"}
+
+
+@app.post("/auth/login")
+def auth_login(payload: LoginRequest) -> dict[str, Any]:
+    user = authenticate_user(payload.username.strip(), payload.password)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(user)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_profile(user),
+    }
+
+
+@app.get("/auth/me")
+def auth_me(current_user: AuthUser = Depends(READ_ROLES)) -> dict[str, str | bool]:
+    return user_profile(current_user)
 
 
 def _entity_config(entity: str) -> dict[str, Any]:
@@ -212,7 +252,10 @@ def _encode(value: Any) -> Any:
 
 # Report routes are declared before generic CRUD routes to avoid path conflicts.
 @app.get("/api/reports/hall-managers")
-def report_hall_managers(session: Session = Depends(get_session)) -> Any:
+def report_hall_managers(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             h.hall_id,
@@ -227,7 +270,10 @@ def report_hall_managers(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/student-leases")
-def report_student_leases(session: Session = Depends(get_session)) -> Any:
+def report_student_leases(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             l.lease_id,
@@ -257,7 +303,10 @@ def report_student_leases(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/summer-leases")
-def report_summer_leases(session: Session = Depends(get_session)) -> Any:
+def report_summer_leases(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             l.lease_id,
@@ -288,7 +337,11 @@ def report_summer_leases(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/student-rent-paid/{banner_id}")
-def report_student_rent_paid(banner_id: str, session: Session = Depends(get_session)) -> Any:
+def report_student_rent_paid(
+    banner_id: str,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             s.banner_id,
@@ -309,6 +362,7 @@ def report_student_rent_paid(banner_id: str, session: Session = Depends(get_sess
 @app.get("/api/reports/unpaid-invoices")
 def report_unpaid_invoices(
     due_before: str | None = Query(default=None),
+    _: AuthUser = Depends(READ_ROLES),
     session: Session = Depends(get_session),
 ) -> Any:
     effective_due = date.today() if due_before is None else _parse_date(due_before, "due_before")
@@ -343,7 +397,10 @@ def report_unpaid_invoices(
 
 
 @app.get("/api/reports/unsatisfactory-inspections")
-def report_unsatisfactory_inspections(session: Session = Depends(get_session)) -> Any:
+def report_unsatisfactory_inspections(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             i.inspection_id,
@@ -360,7 +417,11 @@ def report_unsatisfactory_inspections(session: Session = Depends(get_session)) -
 
 
 @app.get("/api/reports/hall-student-rooms/{hall_id}")
-def report_hall_student_rooms(hall_id: int, session: Session = Depends(get_session)) -> Any:
+def report_hall_student_rooms(
+    hall_id: int,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             s.banner_id,
@@ -379,7 +440,10 @@ def report_hall_student_rooms(hall_id: int, session: Session = Depends(get_sessi
 
 
 @app.get("/api/reports/waiting-list")
-def report_waiting_list(session: Session = Depends(get_session)) -> Any:
+def report_waiting_list(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             banner_id,
@@ -409,7 +473,10 @@ def report_waiting_list(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/student-category-counts")
-def report_student_category_counts(session: Session = Depends(get_session)) -> Any:
+def report_student_category_counts(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT category, COUNT(*) AS student_count
         FROM students
@@ -420,7 +487,10 @@ def report_student_category_counts(session: Session = Depends(get_session)) -> A
 
 
 @app.get("/api/reports/students-without-kin")
-def report_students_without_kin(session: Session = Depends(get_session)) -> Any:
+def report_students_without_kin(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             s.banner_id,
@@ -434,7 +504,11 @@ def report_students_without_kin(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/student-adviser/{banner_id}")
-def report_student_adviser(banner_id: str, session: Session = Depends(get_session)) -> Any:
+def report_student_adviser(
+    banner_id: str,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             s.banner_id,
@@ -452,7 +526,10 @@ def report_student_adviser(banner_id: str, session: Session = Depends(get_sessio
 
 
 @app.get("/api/reports/rent-stats")
-def report_rent_stats(session: Session = Depends(get_session)) -> Any:
+def report_rent_stats(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             MIN(monthly_rent) AS min_rent,
@@ -466,7 +543,10 @@ def report_rent_stats(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/hall-place-counts")
-def report_hall_place_counts(session: Session = Depends(get_session)) -> Any:
+def report_hall_place_counts(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             h.hall_id,
@@ -481,7 +561,10 @@ def report_hall_place_counts(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/reports/senior-staff")
-def report_senior_staff(session: Session = Depends(get_session)) -> Any:
+def report_senior_staff(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     sql = """
         SELECT
             s.staff_id,
@@ -497,7 +580,11 @@ def report_senior_staff(session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/{entity}")
-def list_records(entity: str, session: Session = Depends(get_session)) -> Any:
+def list_records(
+    entity: str,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     config = _entity_config(entity)
     table = get_table(config["table"])
 
@@ -511,7 +598,12 @@ def list_records(entity: str, session: Session = Depends(get_session)) -> Any:
 
 
 @app.get("/api/{entity}/{record_id}")
-def get_record(entity: str, record_id: str, session: Session = Depends(get_session)) -> Any:
+def get_record(
+    entity: str,
+    record_id: str,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     config = _entity_config(entity)
     table = get_table(config["table"])
     pk_name = config["pk"]
@@ -525,7 +617,12 @@ def get_record(entity: str, record_id: str, session: Session = Depends(get_sessi
 
 
 @app.post("/api/{entity}")
-def create_record(entity: str, payload: dict[str, Any] = Body(...), session: Session = Depends(get_session)) -> Any:
+def create_record(
+    entity: str,
+    payload: dict[str, Any] = Body(...),
+    _: AuthUser = Depends(WRITE_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
     config = _entity_config(entity)
     table = get_table(config["table"])
     pk_name = config["pk"]
@@ -561,6 +658,7 @@ def update_record(
     entity: str,
     record_id: str,
     payload: dict[str, Any] = Body(...),
+    _: AuthUser = Depends(WRITE_ROLES),
     session: Session = Depends(get_session),
 ) -> Any:
     config = _entity_config(entity)
@@ -590,7 +688,12 @@ def update_record(
 
 
 @app.delete("/api/{entity}/{record_id}", status_code=204)
-def delete_record(entity: str, record_id: str, session: Session = Depends(get_session)) -> Response:
+def delete_record(
+    entity: str,
+    record_id: str,
+    _: AuthUser = Depends(ADMIN_ROLE),
+    session: Session = Depends(get_session),
+) -> Response:
     config = _entity_config(entity)
     table = get_table(config["table"])
     pk_name = config["pk"]
@@ -614,6 +717,8 @@ def delete_record(entity: str, record_id: str, session: Session = Depends(get_se
 @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
 def spa_fallback(full_path: str) -> Any:
     if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="not found")
+    if full_path.startswith("auth/"):
         raise HTTPException(status_code=404, detail="not found")
     if full_path in {"health", "docs", "redoc", "openapi.json"}:
         raise HTTPException(status_code=404, detail="not found")

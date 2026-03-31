@@ -1,49 +1,93 @@
-# Backend (Python)
+# Backend (FastAPI + MySQL)
 
-This backend uses FastAPI + SQLAlchemy + MySQL.
+Python backend for the University Accommodation Office application.
 
-The backend also serves the built React frontend from `../frontend/dist`.
+## Responsibilities
+
+- Exposes authenticated CRUD and report APIs.
+- Enforces role-based access (`admin`, `manager`, `viewer`).
+- Reflects MySQL schema via SQLAlchemy metadata.
+- Serves built frontend from `../frontend/dist`.
+
+## Requirements
+
+- Python 3.11+
+- MySQL 8+
 
 ## Setup
 
-1. Create virtual environment.
-2. Install dependencies:
+From repository root:
 
 ```bash
-pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+cp .env.example backend/.env
 ```
 
-3. Configure environment variables:
+Edit `backend/.env` values for your MySQL instance.
+
+## Database schema
+
+Apply schema:
 
 ```bash
-cp .env.example .env
+mysql -u <mysql_user> -p -e "CREATE DATABASE IF NOT EXISTS <db_name>;"
+mysql -u <mysql_user> -p <db_name> < backend/schema.sql
 ```
 
-4. Apply schema:
+## Run backend
+
+Development mode:
 
 ```bash
-mysql -u <user> -p <db_name> < schema.sql
+# from repository root
+source .venv/bin/activate
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
 ```
 
-5. Build frontend (once per UI update):
+Open `http://localhost:8000/health`.
+
+If frontend has been built (`frontend/dist` exists), `http://localhost:8000` serves the app UI.
+
+## Authentication
+
+Auth endpoints:
+
+- `POST /auth/login`
+- `GET /auth/me`
+
+Default demo users:
+
+- `admin` / `Admin@123`
+- `manager` / `Manager@123`
+- `viewer` / `Viewer@123`
+
+## Role access model
+
+- `admin`: read + create + update + delete
+- `manager`: read + create + update
+- `viewer`: read-only
+
+## Tests
 
 ```bash
-cd ../frontend
-npm install
-npm run build
-cd ../backend
+# from repository root
+source .venv/bin/activate
+PYTHONPATH=backend python -m pytest backend/tests -q
 ```
 
-6. Run server:
+Runtime smoke test (server must already be running at `http://127.0.0.1:8000`):
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+source .venv/bin/activate
+python backend/tests/runtime_smoke.py
 ```
 
-Open `http://localhost:8000`.
+## Useful files
 
-## Run tests
-
-```bash
-pytest -q
-```
+- API routes: `backend/app/main.py`
+- Auth logic: `backend/app/auth.py`
+- DB config: `backend/app/config.py`
+- DB engine/session/reflection: `backend/app/database.py`
+- API docs: `docs/API.md`

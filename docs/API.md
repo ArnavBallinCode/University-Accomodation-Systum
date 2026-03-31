@@ -2,65 +2,137 @@
 
 Base URL examples:
 
-- Local: `http://localhost:8000`
+- Local backend: `http://localhost:8000`
 - Render: `https://<your-service>.onrender.com`
 
-All responses are `application/json`.
+Content type:
 
-## Health and UI
+- Request/response body: `application/json`
 
-- `GET /health` -> API health check
-- `GET /` -> React frontend entry page
-- `GET /assets/*` -> built frontend assets
-- `GET /{spa-path}` -> SPA fallback route for frontend pages (non-API paths)
+## Authentication
 
-## CRUD Endpoints
+This API is protected with JWT bearer auth.
 
-Each module supports full CRUD:
+### Login
 
-- `GET /api/{module}` -> list
-- `GET /api/{module}/{id}` -> get by id
+- `POST /auth/login`
+
+Request body:
+
+```json
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "<jwt>",
+  "token_type": "bearer",
+  "user": {
+    "username": "admin",
+    "full_name": "Admin Strategist",
+    "role": "admin",
+    "disabled": false
+  }
+}
+```
+
+### Current user profile
+
+- `GET /auth/me`
+- Requires: `Authorization: Bearer <token>`
+
+## Health and frontend serving
+
+- `GET /health` -> service health
+- `GET /` -> frontend entry page (if `frontend/dist` exists)
+- `GET /assets/*` -> frontend build assets
+- `GET /{spa-path}` -> SPA fallback for non-API non-auth routes
+
+## Role permissions
+
+- `admin`: read + create + update + delete
+- `manager`: read + create + update
+- `viewer`: read-only
+
+Applied rules:
+
+- All reads (list/get/report): `admin | manager | viewer`
+- Create/update: `admin | manager`
+- Delete: `admin` only
+
+## CRUD endpoints
+
+Pattern:
+
+- `GET /api/{module}` -> list records
+- `GET /api/{module}/{id}` -> fetch one
 - `POST /api/{module}` -> create
 - `PUT /api/{module}/{id}` -> update
 - `DELETE /api/{module}/{id}` -> delete
 
-### Modules and IDs
+### Modules and id fields
 
-- Staff: `/api/staff/{id}` where `id` is `staff_id` (int)
+- Staff: `/api/staff/{staff_id}` (int)
 - Courses: `/api/courses/{course_number}`
 - Students: `/api/students/{banner_id}`
-- Halls: `/api/halls/{id}` where `id` is `hall_id` (int)
-- Apartments: `/api/apartments/{id}` where `id` is `apartment_id` (int)
-- Rooms: `/api/rooms/{place_number}`
-- Leases: `/api/leases/{id}` where `id` is `lease_id` (int)
-- Invoices: `/api/invoices/{id}` where `id` is `invoice_id` (int)
-- Next of kin: `/api/next-of-kin/{id}` where `id` is `kin_id` (int)
-- Inspections: `/api/inspections/{id}` where `id` is `inspection_id` (int)
+- Halls: `/api/halls/{hall_id}` (int)
+- Apartments: `/api/apartments/{apartment_id}` (int)
+- Rooms: `/api/rooms/{place_number}` (int)
+- Leases: `/api/leases/{lease_id}` (int)
+- Invoices: `/api/invoices/{invoice_id}` (int)
+- Next of kin: `/api/next-of-kin/{kin_id}` (int)
+- Inspections: `/api/inspections/{inspection_id}` (int)
 
-### Date Format for Writes
+## Report endpoints `(a) -> (n)`
 
-All input date fields must use `YYYY-MM-DD`:
+All report routes are `GET` and require authenticated read access.
+
+- `(a)` `/api/reports/hall-managers`
+- `(b)` `/api/reports/student-leases`
+- `(c)` `/api/reports/summer-leases`
+- `(d)` `/api/reports/student-rent-paid/{banner_id}`
+- `(e)` `/api/reports/unpaid-invoices?due_before=YYYY-MM-DD`
+- `(f)` `/api/reports/unsatisfactory-inspections`
+- `(g)` `/api/reports/hall-student-rooms/{hall_id}`
+- `(h)` `/api/reports/waiting-list`
+- `(i)` `/api/reports/student-category-counts`
+- `(j)` `/api/reports/students-without-kin`
+- `(k)` `/api/reports/student-adviser/{banner_id}`
+- `(l)` `/api/reports/rent-stats`
+- `(m)` `/api/reports/hall-place-counts`
+- `(n)` `/api/reports/senior-staff`
+
+## Input and validation rules
+
+Date fields must use `YYYY-MM-DD`.
+
+For example:
 
 - `dob`
-- `date_enter`
-- `date_leave`
-- `due_date`
-- `date_paid`
-- `first_reminder_date`
-- `second_reminder_date`
+- `date_enter`, `date_leave`
+- `due_date`, `date_paid`
+- `first_reminder_date`, `second_reminder_date`
 - `inspection_date`
 
-### Common Status Codes
+The backend also enforces numeric and boolean coercion/validation before DB commit.
 
-- `200 OK`: successful reads/updates
-- `201 Created`: successful create
-- `204 No Content`: successful delete
-- `400 Bad Request`: invalid payload, date format, or constraint violation
-- `404 Not Found`: record does not exist
-- `409 Conflict`: duplicate key
-- `500 Internal Server Error`: server/database error
+## Status codes
 
-Error shape:
+- `200 OK` -> successful reads/updates/creates
+- `204 No Content` -> successful delete
+- `400 Bad Request` -> invalid payload, date format, FK/check validation failure
+- `401 Unauthorized` -> missing/invalid bearer token
+- `403 Forbidden` -> valid token but insufficient role permissions
+- `404 Not Found` -> route or record not found
+- `409 Conflict` -> duplicate key
+- `500 Internal Server Error` -> DB or server failure
+
+Error response shape:
 
 ```json
 {
@@ -68,26 +140,9 @@ Error shape:
 }
 ```
 
-## Report Endpoints (Assignment Queries)
+## Example requests
 
-- `(a)` `GET /api/reports/hall-managers`
-- `(b)` `GET /api/reports/student-leases`
-- `(c)` `GET /api/reports/summer-leases`
-- `(d)` `GET /api/reports/student-rent-paid/{banner_id}`
-- `(e)` `GET /api/reports/unpaid-invoices?due_before=YYYY-MM-DD`
-- `(f)` `GET /api/reports/unsatisfactory-inspections`
-- `(g)` `GET /api/reports/hall-student-rooms/{hall_id}`
-- `(h)` `GET /api/reports/waiting-list`
-- `(i)` `GET /api/reports/student-category-counts`
-- `(j)` `GET /api/reports/students-without-kin`
-- `(k)` `GET /api/reports/student-adviser/{banner_id}`
-- `(l)` `GET /api/reports/rent-stats`
-- `(m)` `GET /api/reports/hall-place-counts`
-- `(n)` `GET /api/reports/senior-staff`
-
-## Example Payloads
-
-### Create Student
+### Create student
 
 ```json
 {
@@ -111,7 +166,7 @@ Error shape:
 }
 ```
 
-### Create Room
+### Create room
 
 ```json
 {
@@ -123,7 +178,7 @@ Error shape:
 }
 ```
 
-### Create Invoice
+### Create invoice
 
 ```json
 {
@@ -135,6 +190,7 @@ Error shape:
 }
 ```
 
-## Testing Coverage
+## Test coverage references
 
-Automated Python route checks are available in `backend/tests/test_routes.py` and verify endpoint registration plus health checks.
+- Route/auth tests: `backend/tests/test_routes.py`
+- Runtime integration smoke checks: `backend/tests/runtime_smoke.py`

@@ -3,13 +3,14 @@ import urllib.error
 import urllib.request
 
 BASE = "http://127.0.0.1:8000"
+AUTH_HEADERS: dict[str, str] = {}
 
 
 results = []
 
 
 def check(name, method, path, expected=(200,), **kwargs):
-    headers = kwargs.get("headers", {}) or {}
+    headers = {**AUTH_HEADERS, **(kwargs.get("headers", {}) or {})}
     json_payload = kwargs.get("json")
     body = None
 
@@ -65,6 +66,19 @@ def check(name, method, path, expected=(200,), **kwargs):
 def main() -> None:
     check("health", "GET", "/health")
     check("root", "GET", "/")
+
+    login_response = check(
+        "auth login",
+        "POST",
+        "/auth/login",
+        json={"username": "admin", "password": "Admin@123"},
+    )
+    access_token = login_response.json()["access_token"]
+
+    global AUTH_HEADERS
+    AUTH_HEADERS = {"Authorization": f"Bearer {access_token}"}
+
+    check("auth me", "GET", "/auth/me")
 
     entities = [
         "staff",

@@ -6,6 +6,8 @@ from app.main import app
 EXPECTED_ENDPOINTS = [
     "/health",
     "/",
+    "/auth/login",
+    "/auth/me",
     "/api/reports/hall-managers",
     "/api/reports/student-leases",
     "/api/reports/summer-leases",
@@ -40,3 +42,30 @@ def test_health_endpoint() -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["service"] == "uni-accom-api-python"
+
+
+def test_auth_login_and_me() -> None:
+    client = TestClient(app)
+
+    login_response = client.post(
+        "/auth/login",
+        json={"username": "admin", "password": "Admin@123"},
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+    me_response = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert me_response.status_code == 200
+    profile = me_response.json()
+    assert profile["username"] == "admin"
+    assert profile["role"] == "admin"
+
+
+def test_auth_me_requires_token() -> None:
+    client = TestClient(app)
+    response = client.get("/auth/me")
+    assert response.status_code == 401
