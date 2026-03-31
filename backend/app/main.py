@@ -44,17 +44,21 @@ app.add_middleware(
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
+FRONTEND_DIST_DIR = FRONTEND_DIR / "dist"
+FRONTEND_INDEX_PATH = FRONTEND_DIST_DIR / "index.html"
 
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+if FRONTEND_ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS_DIR)), name="assets")
 
 
 @app.get("/", include_in_schema=False, response_model=None)
 def index() -> Any:
-    index_path = FRONTEND_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
-    return {"message": "Frontend assets are missing."}
+    if FRONTEND_INDEX_PATH.exists():
+        return FileResponse(FRONTEND_INDEX_PATH)
+    return {
+        "message": "Frontend build is missing. Run npm install && npm run build inside frontend/."
+    }
 
 
 @app.get("/health")
@@ -605,3 +609,20 @@ def delete_record(entity: str, record_id: str, session: Session = Depends(get_se
         raise HTTPException(status_code=500, detail="failed to delete record") from exc
 
     return Response(status_code=204)
+
+
+@app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+def spa_fallback(full_path: str) -> Any:
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="not found")
+    if full_path in {"health", "docs", "redoc", "openapi.json"}:
+        raise HTTPException(status_code=404, detail="not found")
+    if full_path.startswith("assets/"):
+        raise HTTPException(status_code=404, detail="not found")
+
+    if FRONTEND_INDEX_PATH.exists():
+        return FileResponse(FRONTEND_INDEX_PATH)
+
+    return {
+        "message": "Frontend build is missing. Run npm install && npm run build inside frontend/."
+    }

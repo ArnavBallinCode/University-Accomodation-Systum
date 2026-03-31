@@ -10,8 +10,9 @@ All responses are `application/json`.
 ## Health and UI
 
 - `GET /health` -> API health check
-- `GET /` -> frontend dashboard
-- `GET /static/*` -> frontend assets
+- `GET /` -> React frontend entry page
+- `GET /assets/*` -> built frontend assets
+- `GET /{spa-path}` -> SPA fallback route for frontend pages (non-API paths)
 
 ## CRUD Endpoints
 

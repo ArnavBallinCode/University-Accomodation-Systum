@@ -9,13 +9,16 @@ Python + MySQL full-stack DBMS course project with organized split folders:
 
 - Backend: FastAPI + SQLAlchemy + PyMySQL
 - Database: MySQL 8+
-- Frontend: HTML/CSS/Vanilla JS
+- Frontend: React + TypeScript + Tailwind CSS + Framer Motion (Vite)
 
 ## Folder Layout
 
 ```text
 .
 |-- frontend/
+|   |-- src/
+|   |-- package.json
+|   |-- vite.config.ts
 |-- backend/
 |   |-- app/
 |   |-- tests/
@@ -40,11 +43,24 @@ Python + MySQL full-stack DBMS course project with organized split folders:
 	- inspections
 - All assignment report APIs `(a)` through `(n)`
 - MySQL constraints, foreign keys, and room validation triggers
-- Animated dashboard UI for CRUD + report execution
+- Multi-page animated React UI:
+	- Neon Lobby (overview)
+	- Entity Forge (full CRUD)
+	- Report Reactor (all reports)
+	- Pulse Board (live metrics)
 
 ## Run Locally
 
-### 1) Backend setup
+### 1) Prepare database
+
+Create database and apply schema:
+
+```bash
+cd backend
+mysql -u <user> -p <database_name> < schema.sql
+```
+
+### 2) Backend setup
 
 ```bash
 cd backend
@@ -54,28 +70,52 @@ pip install -r requirements.txt
 cp ../.env.example .env
 ```
 
-### 2) Apply schema
+### 3) Frontend setup
 
 ```bash
-mysql -u <user> -p <database_name> < schema.sql
+cd frontend
+npm install
 ```
 
-### 3) Start backend API
+### 4) Run in development mode (2 terminals)
+
+Terminal A (backend):
 
 ```bash
+cd backend
+source .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 4) Open app
+Terminal B (frontend):
 
-- Preferred: open `http://localhost:8000` (backend serves frontend)
-- Optional split mode: serve `frontend/` separately and keep backend on `8000`
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+### 5) Run in production-like single-service mode
+
+Build frontend and let backend serve it:
+
+```bash
+cd frontend
+npm run build
+cd ../backend
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Open `http://localhost:8000`.
 
 ## Test
 
 ```bash
 cd backend
 pytest -q
+python tests/runtime_smoke.py
 ```
 
 ## API Docs
@@ -89,6 +129,11 @@ The project includes a Render blueprint in `render.yaml` configured for Python:
 - build: `pip install -r backend/requirements.txt`
 - start: `python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT`
 - health check: `/health`
+
+Important:
+
+- Backend serves the built React app from `frontend/dist`.
+- Before deployment, run `npm run build` in `frontend/` and commit `frontend/dist` updates.
 
 Set these environment variables in Render:
 
