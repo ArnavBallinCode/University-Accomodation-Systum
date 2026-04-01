@@ -268,48 +268,52 @@ export function EntityStudioPage(): JSX.Element {
   };
 
   return (
-    <div className="grid gap-6 pb-8 xl:grid-cols-[1fr_1.4fr]">
+    <div className="space-y-6 pb-8">
+      {/* ── Form Panel (compact, full-width on top) ── */}
       <section className="glass-panel p-5 md:p-6">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-orange-600">Entity Forge</p>
-            <h2 className="font-heading text-2xl font-black text-slate-900">Dynamic CRUD cockpit</h2>
+        {/* Header row: title + module selector + refresh */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-orange-600">Entity Forge</p>
+              <h2 className="font-heading text-xl font-black text-slate-900 md:text-2xl">Dynamic CRUD cockpit</h2>
+            </div>
+
+            <select
+              value={entityKey}
+              onChange={(event) => setEntityKey(event.target.value)}
+              className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm font-bold text-slate-800 outline-none ring-orange-300 transition focus:ring"
+            >
+              {ENTITIES.map((entity) => (
+                <option key={entity.key} value={entity.key}>
+                  {entity.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void fetchRecords(activeEntity);
-            }}
-            className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-100 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-cyan-900"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
+
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-600 sm:inline-block">
+              {user?.role ?? "viewer"} | {canWrite ? "Write" : "Read-only"}
+              {canDelete ? " | Delete" : ""}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                void fetchRecords(activeEntity);
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-100 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-cyan-900"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <label className="mb-4 block">
-          <span className="mb-2 block font-heading text-xs font-black uppercase tracking-[0.15em] text-slate-500">Module</span>
-          <select
-            value={entityKey}
-            onChange={(event) => setEntityKey(event.target.value)}
-            className="w-full rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
-          >
-            {ENTITIES.map((entity) => (
-              <option key={entity.key} value={entity.key}>
-                {entity.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <p className="mb-4 text-sm text-slate-600">{activeEntity.description}</p>
 
-        <p className="mb-4 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-slate-600">{activeEntity.description}</p>
-
-        <p className="mb-4 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-600">
-          Access: {user?.role ?? "viewer"} | {canWrite ? "Create + Update enabled" : "Read-only mode"}
-          {canDelete ? " | Delete enabled" : " | Delete disabled"}
-        </p>
-
-        <div className="space-y-3">
+        {/* Fields grid — responsive columns */}
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {activeEntity.fields.map((field) => {
             const value = form[field.key];
             const disabled = !canWrite || (Boolean(editingRecord) && field.key === activeEntity.idKey);
@@ -326,15 +330,15 @@ export function EntityStudioPage(): JSX.Element {
                     value={typeof value === "string" ? value : ""}
                     disabled={disabled}
                     onChange={(event) => handleInputChange(field, event.target.value)}
-                    rows={3}
-                    className="w-full rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
+                    rows={2}
+                    className="w-full rounded-xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
                   />
                 ) : field.type === "select" ? (
                   <select
                     value={typeof value === "string" ? value : ""}
                     disabled={disabled}
                     onChange={(event) => handleInputChange(field, event.target.value)}
-                    className="w-full rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
+                    className="w-full rounded-xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
                   >
                     <option value="">Select...</option>
                     {(field.options ?? []).map((option) => (
@@ -344,7 +348,7 @@ export function EntityStudioPage(): JSX.Element {
                     ))}
                   </select>
                 ) : field.type === "boolean" ? (
-                  <div className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                  <div className="flex items-center justify-between rounded-xl border border-white/80 bg-white/80 px-3 py-2">
                     <span className="text-sm text-slate-700">{Boolean(value) ? "True" : "False"}</span>
                     <input
                       type="checkbox"
@@ -361,7 +365,7 @@ export function EntityStudioPage(): JSX.Element {
                     disabled={disabled}
                     onChange={(event) => handleInputChange(field, event.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
+                    className="w-full rounded-xl border border-white/80 bg-white/80 px-3 py-2 text-sm text-slate-800 outline-none ring-orange-300 transition focus:ring"
                   />
                 )}
               </label>
@@ -391,6 +395,7 @@ export function EntityStudioPage(): JSX.Element {
         </div>
       </section>
 
+
       <section className="glass-panel p-5 md:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -411,7 +416,7 @@ export function EntityStudioPage(): JSX.Element {
             <thead>
               <tr className="border-b border-white/70">
                 {columns.map((column) => (
-                  <th key={column} className="px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  <th key={column} className="whitespace-nowrap px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500">
                     {titleCase(column)}
                   </th>
                 ))}
