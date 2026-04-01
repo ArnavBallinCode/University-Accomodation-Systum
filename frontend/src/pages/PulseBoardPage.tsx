@@ -162,28 +162,36 @@ export function PulseBoardPage(): JSX.Element {
             {loading ? (
               <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
             ) : categoryCounts.length > 0 ? (
-              categoryCounts.map((item, idx) => {
-                const count = item.student_count as number;
-                const total = categoryCounts.reduce((acc, curr) => acc + (curr.student_count as number), 0);
-                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-                return (
-                  <div key={item.category as string} className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-                      <span>{item.category as string}</span>
-                      <span>{count} ({pct}%)</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: 0.2 + idx * 0.1 }}
-                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-400"
-                      />
-                    </div>
-                  </div>
+              (() => {
+                const total = categoryCounts.reduce(
+                  (acc, curr) => acc + (curr.student_count as number),
+                  0
                 );
-              })
+
+                return categoryCounts.map((item, idx) => {
+                  const count = item.student_count as number;
+                  const pct = Math.round((count / total) * 100);
+
+                  return (
+                    <div key={item.category as string} className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <span>{item.category as string}</span>
+                        <span>
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.8, delay: 0.2 + idx * 0.1 }}
+                          className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-400"
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()
             ) : (
               <p className="py-8 text-center text-sm italic text-slate-400">No student category data available.</p>
             )}
