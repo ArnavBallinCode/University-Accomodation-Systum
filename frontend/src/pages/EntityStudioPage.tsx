@@ -281,7 +281,14 @@ export function EntityStudioPage(): JSX.Element {
 
             <select
               value={entityKey}
-              onChange={(event) => setEntityKey(event.target.value)}
+              onChange={(event) => {
+                const newEntityKey = event.target.value;
+                setEntityKey(newEntityKey);
+
+                const url = new URL(window.location.href);
+                url.searchParams.set("entity", newEntityKey);
+                window.history.replaceState(null, "", url.toString());
+              }}
               className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm font-bold text-slate-800 outline-none ring-orange-300 transition focus:ring"
             >
               {ENTITIES.map((entity) => (
