@@ -312,7 +312,9 @@ export function PulseBoardPage(): JSX.Element {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * idx }}
-                onClick={() => (window.location.href = `/studio?entity=${action.entity}`)}
+                onClick={() => {
+                  window.history.pushState(null, "", `/studio?entity=${action.entity}`);
+                }}
                 className={`flex items-center justify-between rounded-2xl border ${action.border} bg-gradient-to-r ${action.color} p-4 transition-all hover:scale-[1.02] hover:shadow-md active:scale-95`}
               >
                 <div className="flex items-center gap-3">
