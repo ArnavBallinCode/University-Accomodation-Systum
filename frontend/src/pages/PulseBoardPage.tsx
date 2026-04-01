@@ -3,7 +3,7 @@ import { Activity, Flame, Waves } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useToast } from "../components/ToastProvider";
-import { apiGet, apiPost } from "../lib/api";
+import { apiGet } from "../lib/api";
 import type { DataRow } from "../types";
 
 interface PulseMetric {
@@ -26,70 +26,62 @@ export function PulseBoardPage(): JSX.Element {
   const [rentStats, setRentStats] = useState<DataRow | null>(null);
   const [categoryCounts, setCategoryCounts] = useState<DataRow[]>([]);
   const [occupancyData, setOccupancyData] = useState<DataRow[]>([]);
-  const [summary, setSummary] = useState<{ total_count: number; total_value: number; paid_count: number; pending_value: number; semester: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const { pushToast } = useToast();
 
-  const loadPulse = async (): Promise<void> => {
-    try {
-      const [counts, rent, categories, occupancy, invoiceSummary] = await Promise.all([
-        Promise.all(
-          sources.map(async (source) => {
-            const rows = await apiGet<unknown[]>(source.endpoint);
-            return {
-              label: source.label,
-              value: rows.length,
-              accent: source.accent
-            } satisfies PulseMetric;
-          })
-        ),
-        apiGet<DataRow>("/api/reports/rent-stats"),
-        apiGet<DataRow[]>("/api/reports/student-category-counts"),
-        apiGet<DataRow[]>("/api/reports/hall-place-counts"),
-        apiGet<any>("/api/reports/active-semester-summary")
-      ]);
-
-      setMetrics(counts);
-      setRentStats(rent);
-      setCategoryCounts(categories);
-      setOccupancyData(occupancy);
-      setSummary(invoiceSummary);
-    } catch {
-      pushToast({
-        tone: "error",
-        title: "Pulse board offline",
-        description: "Could not load metrics. Ensure backend and database are running."
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void loadPulse();
-  }, []);
+    let mounted = true;
 
-  const handleGenerate = async (): Promise<void> => {
-    if (!window.confirm(`Generate ${summary?.semester || "current"} invoices for all active leases?`)) return;
-    try {
-      const res = await apiPost<{ count: number; total_value: number }>("/api/actions/generate-invoices", {});
-      pushToast({
-        tone: "success",
-        title: "Invoices generated",
-        description: `Successfully created ${res.count} invoices (Total: $${res.total_value.toLocaleString()})`
-      });
-      await loadPulse();
-    } catch (err) {
-      pushToast({
-        tone: "error",
-        title: "Execution failed",
-        description: err instanceof Error ? err.message : "System error"
-      });
-    }
-  };
+    const loadPulse = async (): Promise<void> => {
+      try {
+        const [counts, rent, categories, occupancy] = await Promise.all([
+          Promise.all(
+            sources.map(async (source) => {
+              const rows = await apiGet<unknown[]>(source.endpoint);
+              return {
+                label: source.label,
+                value: rows.length,
+                accent: source.accent
+              } satisfies PulseMetric;
+            })
+          ),
+          apiGet<DataRow>("/api/reports/rent-stats"),
+          apiGet<DataRow[]>("/api/reports/student-category-counts"),
+          apiGet<DataRow[]>("/api/reports/hall-place-counts")
+        ]);
+
+        if (mounted) {
+          setMetrics(counts);
+          setRentStats(rent);
+          setCategoryCounts(categories);
+          setOccupancyData(occupancy);
+        }
+      } catch {
+        if (mounted) {
+          pushToast({
+            tone: "error",
+            title: "Pulse board offline",
+            description: "Could not load metrics. Ensure backend and database are running."
+          });
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadPulse();
+
+    return () => {
+      mounted = false;
+    };
+  }, [pushToast]);
 
   const maxValue = useMemo(() => {
-    if (metrics.length === 0) return 1;
+    if (metrics.length === 0) {
+      return 1;
+    }
     return Math.max(...metrics.map((metric) => metric.value), 1);
   }, [metrics]);
 
@@ -163,14 +155,11 @@ export function PulseBoardPage(): JSX.Element {
               <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
             ) : categoryCounts.length > 0 ? (
               (() => {
-                const total = categoryCounts.reduce(
-                  (acc, curr) => acc + (curr.student_count as number),
-                  0
-                );
+                const total = categoryCounts.reduce((acc, curr) => acc + (curr.student_count as number), 0);
 
                 return categoryCounts.map((item, idx) => {
                   const count = item.student_count as number;
-                  const pct = Math.round((count / total) * 100);
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
                   return (
                     <div key={item.category as string} className="space-y-2">
@@ -338,32 +327,6 @@ export function PulseBoardPage(): JSX.Element {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="glass-panel p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Financial Forge</p>
-              <h3 className="font-heading text-xl font-black text-white">Active Semester: {summary?.semester || "..."}</h3>
-            </div>
-            <button
-              onClick={handleGenerate}
-              className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90"
-            >
-              <Activity className="h-5 w-5 transition-transform group-hover:rotate-180" />
-            </button>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Total Invoices</p>
-              <p className="mt-1 font-heading text-3xl font-black text-white">{summary?.total_count ?? "0"}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Total Value</p>
-              <p className="mt-1 font-heading text-3xl font-black text-white">${summary?.total_value.toLocaleString() ?? "0"}</p>
-            </div>
-          </div>
-        </article>
-
         <article className="glass-panel p-5">
           <h3 className="font-heading text-xl font-black text-slate-900">Operation tips</h3>
           <ul className="mt-3 space-y-3 text-sm text-slate-700">
