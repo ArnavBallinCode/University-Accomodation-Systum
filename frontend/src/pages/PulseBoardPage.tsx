@@ -138,7 +138,50 @@ export function PulseBoardPage(): JSX.Element {
         })}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="glass-panel p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-xl font-black text-slate-900">Student diversity</h3>
+              <p className="mt-1 text-sm text-slate-600">Breakdown by enrollment category</p>
+            </div>
+            <div className="rounded-full bg-orange-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-orange-600">
+              Live Mix
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            {loading ? (
+              <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+            ) : categoryCounts.length > 0 ? (
+              categoryCounts.map((item, idx) => {
+                const count = item.student_count as number;
+                const total = categoryCounts.reduce((acc, curr) => acc + (curr.student_count as number), 0);
+                const pct = Math.round((count / total) * 100);
+
+                return (
+                  <div key={item.category as string} className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <span>{item.category as string}</span>
+                      <span>{count} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: 0.2 + idx * 0.1 }}
+                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-400"
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="py-8 text-center text-sm italic text-slate-400">No student category data available.</p>
+            )}
+          </div>
+        </article>
+
         <article className="glass-panel p-5">
           <h3 className="font-heading text-xl font-black text-slate-900">Rent signal</h3>
           <p className="mt-1 text-sm text-slate-600">Calculated from the hall room rent distribution report.</p>
