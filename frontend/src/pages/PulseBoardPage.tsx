@@ -210,6 +210,81 @@ export function PulseBoardPage(): JSX.Element {
         </article>
 
         <article className="glass-panel p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-xl font-black text-slate-900">Occupancy signal</h3>
+              <p className="mt-1 text-sm text-slate-600">Total capacity vs. active leases</p>
+            </div>
+            <div className="rounded-full bg-cyan-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-600">
+              Space Auth
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center justify-center">
+            {loading ? (
+              <div className="h-24 w-full animate-pulse rounded-xl bg-slate-100" />
+            ) : (
+              <>
+                {(() => {
+                  const totalPlaces = occupancyData.reduce((acc, curr) => acc + (curr.total_places as number), 0);
+                  const activeLeases = metrics.find((m) => m.label === "Leases")?.value || 0;
+                  const occupancyPct = totalPlaces > 0 ? Math.round((activeLeases / totalPlaces) * 100) : 0;
+
+                  return (
+                    <div className="w-full space-y-6">
+                      <div className="relative flex h-32 items-center justify-center">
+                        <svg className="h-full w-full transform -rotate-90">
+                          <circle
+                            cx="50%"
+                            cy="50%"
+                            r="48"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="transparent"
+                            className="text-slate-100"
+                          />
+                          <motion.circle
+                            cx="50%"
+                            cy="50%"
+                            r="48"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            strokeDasharray={2 * Math.PI * 48}
+                            initial={{ strokeDashoffset: 2 * Math.PI * 48 }}
+                            animate={{ strokeDashoffset: 2 * Math.PI * 48 * (1 - occupancyPct / 100) }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            className="text-cyan-500"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center">
+                          <span className="font-heading text-3xl font-black text-slate-900">{occupancyPct}%</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Filled</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="rounded-xl border border-white/10 bg-black/5 p-3 dark:bg-white/5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-600/90 dark:text-cyan-400/90">Leases</p>
+                          <p className="mt-1 font-heading text-2xl font-black text-slate-900">{activeLeases}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/5 p-3 dark:bg-white/5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-600/90 dark:text-cyan-400/90">Total spots</p>
+                          <p className="mt-1 font-heading text-2xl font-black text-slate-900">{totalPlaces}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="glass-panel p-5">
           <h3 className="font-heading text-xl font-black text-slate-900">Operation tips</h3>
           <ul className="mt-3 space-y-3 text-sm text-slate-700">
             <li className="rounded-xl border border-white/70 bg-white/75 p-3">Use Entity Forge when importing or correcting master records.</li>
