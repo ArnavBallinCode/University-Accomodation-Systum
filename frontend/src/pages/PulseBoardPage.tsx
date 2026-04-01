@@ -281,6 +281,42 @@ export function PulseBoardPage(): JSX.Element {
             )}
           </div>
         </article>
+
+        <article className="glass-panel p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-xl font-black text-slate-900">Quick action forge</h3>
+              <p className="mt-1 text-sm text-slate-600">Common administrative shortcuts</p>
+            </div>
+            <div className="rounded-full bg-orange-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-orange-600">
+              Shortcuts
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-3">
+            {[
+              { label: "Enroll student", icon: "👤", color: "from-blue-500/10 to-indigo-500/10", border: "border-blue-200", text: "text-blue-700", entity: "students" },
+              { label: "New hall unit", icon: "🏢", color: "from-emerald-500/10 to-teal-500/10", border: "border-emerald-200", text: "text-emerald-700", entity: "halls" },
+              { label: "Draft lease", icon: "📑", color: "from-amber-500/10 to-orange-500/10", border: "border-amber-200", text: "text-amber-700", entity: "leases" },
+              { label: "System staff", icon: "⚙️", color: "from-slate-500/10 to-slate-600/10", border: "border-slate-300", text: "text-slate-700", entity: "staff" }
+            ].map((action, idx) => (
+              <motion.button
+                key={action.label}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * idx }}
+                onClick={() => (window.location.href = `/studio?entity=${action.entity}`)}
+                className={`flex items-center justify-between rounded-2xl border ${action.border} bg-gradient-to-r ${action.color} p-4 transition-all hover:scale-[1.02] hover:shadow-md active:scale-95`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{action.icon}</span>
+                  <span className={`font-heading text-sm font-black uppercase tracking-wider ${action.text}`}>{action.label}</span>
+                </div>
+                <div className={`${action.text} opacity-50`}>→</div>
+              </motion.button>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
