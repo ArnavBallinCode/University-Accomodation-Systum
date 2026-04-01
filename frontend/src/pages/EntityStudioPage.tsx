@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { useToast } from "../components/ToastProvider";
 import { ENTITIES } from "../config/entities";
@@ -69,7 +70,11 @@ function formatCellValue(value: unknown): string {
 }
 
 export function EntityStudioPage(): JSX.Element {
-  const [entityKey, setEntityKey] = useState<string>(ENTITIES[0].key);
+  const [searchParams] = useSearchParams();
+  const [entityKey, setEntityKey] = useState<string>(() => {
+    const param = searchParams.get("entity");
+    return ENTITIES.some((e) => e.key === param) ? (param as string) : ENTITIES[0].key;
+  });
   const [records, setRecords] = useState<DataRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
