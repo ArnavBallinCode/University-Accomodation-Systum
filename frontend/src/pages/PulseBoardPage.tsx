@@ -3,7 +3,7 @@ import { Activity, Flame, Waves } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useToast } from "../components/ToastProvider";
-import { apiGet } from "../lib/api";
+import { apiGet, apiPost } from "../lib/api";
 import type { DataRow } from "../types";
 
 interface PulseMetric {
@@ -320,6 +320,58 @@ export function PulseBoardPage(): JSX.Element {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
+        <article className="glass-panel p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Financial Forge</p>
+              <h3 className="font-heading text-xl font-black text-white">Administrative tools</h3>
+            </div>
+            <div className="rounded-full bg-cyan-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-600">
+              Bulk Ops
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!window.confirm("Generate Spring 2026 invoices for all active leases?")) return;
+                try {
+                  const res = await apiPost<{ count: number; total_value: number }>("/api/actions/generate-invoices", {});
+                  pushToast({
+                    tone: "success",
+                    title: "Invoices generated",
+                    description: `Successfully created ${res.count} invoices (Total: $${res.total_value.toLocaleString()})`
+                  });
+                  // Refresh metrics
+                  void (async () => {
+                    const latest = await apiGet<PulseMetric[]>("/api/reports/rent-stats"); // Using a valid metrics-like endpoint or just skip if not needed
+                    setMetrics((current) => [...current]); // Dummy refresh for now
+                  })();
+                } catch (err) {
+                  pushToast({
+                    tone: "error",
+                    title: "Execution failed",
+                    description: err instanceof Error ? err.message : "System error"
+                  });
+                }
+              }}
+              className="group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-5 transition-all hover:border-cyan-400 hover:shadow-lg active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500 text-2xl text-white shadow-glow transition-transform group-hover:rotate-12">
+                  💰
+                </div>
+                <div className="text-left">
+                  <p className="font-heading text-sm font-black uppercase tracking-wider text-cyan-950">Generate semester invoices</p>
+                  <p className="text-xs font-semibold text-cyan-800">Scan active leases & bulk create billing</p>
+                </div>
+              </div>
+              <div className="font-heading text-xl font-black text-cyan-600">GO</div>
+            </button>
+          </div>
+        </article>
+
         <article className="glass-panel p-5">
           <h3 className="font-heading text-xl font-black text-slate-900">Operation tips</h3>
           <ul className="mt-3 space-y-3 text-sm text-slate-700">
