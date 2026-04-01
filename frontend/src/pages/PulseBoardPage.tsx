@@ -26,62 +26,70 @@ export function PulseBoardPage(): JSX.Element {
   const [rentStats, setRentStats] = useState<DataRow | null>(null);
   const [categoryCounts, setCategoryCounts] = useState<DataRow[]>([]);
   const [occupancyData, setOccupancyData] = useState<DataRow[]>([]);
+  const [summary, setSummary] = useState<{ total_count: number; total_value: number; paid_count: number; pending_value: number; semester: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const { pushToast } = useToast();
 
+  const loadPulse = async (): Promise<void> => {
+    try {
+      const [counts, rent, categories, occupancy, invoiceSummary] = await Promise.all([
+        Promise.all(
+          sources.map(async (source) => {
+            const rows = await apiGet<unknown[]>(source.endpoint);
+            return {
+              label: source.label,
+              value: rows.length,
+              accent: source.accent
+            } satisfies PulseMetric;
+          })
+        ),
+        apiGet<DataRow>("/api/reports/rent-stats"),
+        apiGet<DataRow[]>("/api/reports/student-category-counts"),
+        apiGet<DataRow[]>("/api/reports/hall-place-counts"),
+        apiGet<any>("/api/reports/active-semester-summary")
+      ]);
+
+      setMetrics(counts);
+      setRentStats(rent);
+      setCategoryCounts(categories);
+      setOccupancyData(occupancy);
+      setSummary(invoiceSummary);
+    } catch {
+      pushToast({
+        tone: "error",
+        title: "Pulse board offline",
+        description: "Could not load metrics. Ensure backend and database are running."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-
-    const loadPulse = async (): Promise<void> => {
-      try {
-        const [counts, rent, categories, occupancy] = await Promise.all([
-          Promise.all(
-            sources.map(async (source) => {
-              const rows = await apiGet<unknown[]>(source.endpoint);
-              return {
-                label: source.label,
-                value: rows.length,
-                accent: source.accent
-              } satisfies PulseMetric;
-            })
-          ),
-          apiGet<DataRow>("/api/reports/rent-stats"),
-          apiGet<DataRow[]>("/api/reports/student-category-counts"),
-          apiGet<DataRow[]>("/api/reports/hall-place-counts")
-        ]);
-
-        if (mounted) {
-          setMetrics(counts);
-          setRentStats(rent);
-          setCategoryCounts(categories);
-          setOccupancyData(occupancy);
-        }
-      } catch {
-        if (mounted) {
-          pushToast({
-            tone: "error",
-            title: "Pulse board offline",
-            description: "Could not load metrics. Ensure backend and database are running."
-          });
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     void loadPulse();
+  }, []);
 
-    return () => {
-      mounted = false;
-    };
-  }, [pushToast]);
+  const handleGenerate = async (): Promise<void> => {
+    if (!window.confirm(`Generate ${summary?.semester || "current"} invoices for all active leases?`)) return;
+    try {
+      const res = await apiPost<{ count: number; total_value: number }>("/api/actions/generate-invoices", {});
+      pushToast({
+        tone: "success",
+        title: "Invoices generated",
+        description: `Successfully created ${res.count} invoices (Total: $${res.total_value.toLocaleString()})`
+      });
+      await loadPulse();
+    } catch (err) {
+      pushToast({
+        tone: "error",
+        title: "Execution failed",
+        description: err instanceof Error ? err.message : "System error"
+      });
+    }
+  };
 
   const maxValue = useMemo(() => {
-    if (metrics.length === 0) {
-      return 1;
-    }
+    if (metrics.length === 0) return 1;
     return Math.max(...metrics.map((metric) => metric.value), 1);
   }, [metrics]);
 
@@ -157,7 +165,7 @@ export function PulseBoardPage(): JSX.Element {
               categoryCounts.map((item, idx) => {
                 const count = item.student_count as number;
                 const total = categoryCounts.reduce((acc, curr) => acc + (curr.student_count as number), 0);
-                const pct = Math.round((count / total) * 100);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
                 return (
                   <div key={item.category as string} className="space-y-2">
@@ -324,51 +332,25 @@ export function PulseBoardPage(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Financial Forge</p>
-              <h3 className="font-heading text-xl font-black text-white">Administrative tools</h3>
+              <h3 className="font-heading text-xl font-black text-white">Active Semester: {summary?.semester || "..."}</h3>
             </div>
-            <div className="rounded-full bg-cyan-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-600">
-              Bulk Ops
-            </div>
+            <button
+              onClick={handleGenerate}
+              className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90"
+            >
+              <Activity className="h-5 w-5 transition-transform group-hover:rotate-180" />
+            </button>
           </div>
 
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={async () => {
-                if (!window.confirm("Generate Spring 2026 invoices for all active leases?")) return;
-                try {
-                  const res = await apiPost<{ count: number; total_value: number }>("/api/actions/generate-invoices", {});
-                  pushToast({
-                    tone: "success",
-                    title: "Invoices generated",
-                    description: `Successfully created ${res.count} invoices (Total: $${res.total_value.toLocaleString()})`
-                  });
-                  // Refresh metrics
-                  void (async () => {
-                    const latest = await apiGet<PulseMetric[]>("/api/reports/rent-stats"); // Using a valid metrics-like endpoint or just skip if not needed
-                    setMetrics((current) => [...current]); // Dummy refresh for now
-                  })();
-                } catch (err) {
-                  pushToast({
-                    tone: "error",
-                    title: "Execution failed",
-                    description: err instanceof Error ? err.message : "System error"
-                  });
-                }
-              }}
-              className="group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-5 transition-all hover:border-cyan-400 hover:shadow-lg active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500 text-2xl text-white shadow-glow transition-transform group-hover:rotate-12">
-                  💰
-                </div>
-                <div className="text-left">
-                  <p className="font-heading text-sm font-black uppercase tracking-wider text-cyan-950">Generate semester invoices</p>
-                  <p className="text-xs font-semibold text-cyan-800">Scan active leases & bulk create billing</p>
-                </div>
-              </div>
-              <div className="font-heading text-xl font-black text-cyan-600">GO</div>
-            </button>
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Total Invoices</p>
+              <p className="mt-1 font-heading text-3xl font-black text-white">{summary?.total_count ?? "0"}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Total Value</p>
+              <p className="mt-1 font-heading text-3xl font-black text-white">${summary?.total_value.toLocaleString() ?? "0"}</p>
+            </div>
           </div>
         </article>
 

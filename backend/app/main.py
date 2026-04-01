@@ -416,6 +416,87 @@ def report_unsatisfactory_inspections(
     return _encode(_run_report(session, sql))
 
 
+@app.get("/api/reports/hall-occupancy-full/{hall_id}")
+def report_hall_occupancy_full(
+    hall_id: int,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
+    sql = """
+        SELECT
+            r.room_number,
+            r.place_number,
+            r.monthly_rent,
+            CASE
+                WHEN l.lease_id IS NOT NULL THEN CONCAT(s.first_name, ' ', s.last_name)
+                ELSE '--- VACANT ---'
+            END AS occupant_name,
+            COALESCE(l.duration_semesters, 'N/A') AS current_lease
+        FROM rooms r
+        JOIN halls h ON h.hall_id = r.hall_id
+        LEFT JOIN leases l ON l.place_number = r.place_number
+        LEFT JOIN students s ON s.banner_id = l.banner_id
+        WHERE h.hall_id = :hall_id
+        ORDER BY r.room_number
+    """
+    return _encode(_run_report(session, sql, {"hall_id": hall_id}))
+
+
+@app.post("/api/actions/generate-invoices")
+def action_generate_invoices(
+    current_user: AuthUser = Depends(WRITE_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
+    today = date.today()
+    target_semester = "Spring 2026"
+
+    # Select active leases (today is between start and end)
+    sql_active_leases = """
+        SELECT
+            l.lease_id,
+            r.monthly_rent
+        FROM leases l
+        JOIN rooms r ON r.place_number = l.place_number
+        WHERE l.date_enter <= :today
+          AND (l.date_leave IS NULL OR l.date_leave >= :today)
+          AND l.lease_id NOT IN (SELECT lease_id FROM invoices WHERE semester = :sem)
+    """
+
+    leases_to_invoice = _run_report(session, sql_active_leases, {"today": today, "sem": target_semester})
+
+    new_invoices_count = 0
+    total_value = 0.0
+
+    for item in leases_to_invoice:
+        lease_id = item["lease_id"]
+        # Standard logic: 4 months of rent for a semester
+        amount_due = float(item["monthly_rent"]) * 4
+
+        stmt = text("""
+            INSERT INTO invoices (lease_id, semester, amount_due, due_date)
+            VALUES (:lid, :sem, :amt, :due)
+        """)
+
+        session.execute(stmt, {
+            "lid": lease_id,
+            "sem": target_semester,
+            "amt": amount_due,
+            "due": today
+        })
+        new_invoices_count += 1
+        total_value += amount_due
+
+    _safe_commit(session)
+
+    return _encode({
+        "status": "success",
+        "semester": target_semester,
+        "count": new_invoices_count,
+        "total_value": total_value,
+        "message": f"Generated {new_invoices_count} invoices for {target_semester}."
+    })
+
+
 @app.get("/api/reports/hall-student-rooms/{hall_id}")
 def report_hall_student_rooms(
     hall_id: int,
