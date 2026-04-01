@@ -244,7 +244,9 @@ export function PulseBoardPage(): JSX.Element {
                 {(() => {
                   const totalPlaces = occupancyData.reduce((acc, curr) => acc + (curr.total_places as number), 0);
                   const activeLeases = metrics.find((m) => m.label === "Leases")?.value || 0;
-                  const occupancyPct = totalPlaces > 0 ? Math.round((activeLeases / totalPlaces) * 100) : 0;
+                  const totalCapacityMetric = metrics.find((m) => m.label === "Rooms")?.value || 0;
+                  const totalCapacity = totalCapacityMetric > 0 ? totalCapacityMetric : totalPlaces;
+                  const occupancyPct = totalCapacity > 0 ? Math.round((activeLeases / totalCapacity) * 100) : 0;
 
                   return (
                     <div className="w-full space-y-6">
