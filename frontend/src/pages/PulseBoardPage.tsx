@@ -24,6 +24,8 @@ const sources = [
 export function PulseBoardPage(): JSX.Element {
   const [metrics, setMetrics] = useState<PulseMetric[]>([]);
   const [rentStats, setRentStats] = useState<DataRow | null>(null);
+  const [categoryCounts, setCategoryCounts] = useState<DataRow[]>([]);
+  const [occupancyData, setOccupancyData] = useState<DataRow[]>([]);
   const [loading, setLoading] = useState(true);
   const { pushToast } = useToast();
 
@@ -32,22 +34,27 @@ export function PulseBoardPage(): JSX.Element {
 
     const loadPulse = async (): Promise<void> => {
       try {
-        const counts = await Promise.all(
-          sources.map(async (source) => {
-            const rows = await apiGet<unknown[]>(source.endpoint);
-            return {
-              label: source.label,
-              value: rows.length,
-              accent: source.accent
-            } satisfies PulseMetric;
-          })
-        );
-
-        const rent = await apiGet<DataRow>("/api/reports/rent-stats");
+        const [counts, rent, categories, occupancy] = await Promise.all([
+          Promise.all(
+            sources.map(async (source) => {
+              const rows = await apiGet<unknown[]>(source.endpoint);
+              return {
+                label: source.label,
+                value: rows.length,
+                accent: source.accent
+              } satisfies PulseMetric;
+            })
+          ),
+          apiGet<DataRow>("/api/reports/rent-stats"),
+          apiGet<DataRow[]>("/api/reports/student-category-counts"),
+          apiGet<DataRow[]>("/api/reports/hall-place-counts")
+        ]);
 
         if (mounted) {
           setMetrics(counts);
           setRentStats(rent);
+          setCategoryCounts(categories);
+          setOccupancyData(occupancy);
         }
       } catch {
         if (mounted) {
