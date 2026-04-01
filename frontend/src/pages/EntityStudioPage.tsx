@@ -75,6 +75,13 @@ export function EntityStudioPage(): JSX.Element {
     const param = searchParams.get("entity");
     return ENTITIES.some((e) => e.key === param) ? (param as string) : ENTITIES[0].key;
   });
+  useEffect(() => {
+    const param = searchParams.get("entity");
+    const nextKey = ENTITIES.some((e) => e.key === param)
+      ? (param as string)
+      : ENTITIES[0].key;
+    setEntityKey((prev) => (prev === nextKey ? prev : nextKey));
+  }, [searchParams]);
   const [records, setRecords] = useState<DataRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
