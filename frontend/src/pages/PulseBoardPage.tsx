@@ -278,7 +278,7 @@ export function PulseBoardPage(): JSX.Element {
                         </div>
                         <div className="rounded-xl border border-white/10 bg-black/5 p-3 dark:bg-white/5">
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-600/90 dark:text-cyan-400/90">Total spots</p>
-                          <p className="mt-1 font-heading text-2xl font-black text-slate-900">{totalPlaces}</p>
+                          <p className="mt-1 font-heading text-2xl font-black text-slate-900">{totalCapacity}</p>
                         </div>
                       </div>
                     </div>
