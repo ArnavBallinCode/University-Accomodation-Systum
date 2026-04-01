@@ -48,6 +48,77 @@ This repository now uses a Python backend and a React TypeScript frontend.
 
 ## Quick start (local)
 
+---
+
+## Quick start (Windows)
+
+All commands below assume you are in the project root directory. Use Command Prompt (cmd.exe) or PowerShell as noted.
+
+### 1) Create and load database schema
+
+Open Command Prompt or PowerShell:
+
+```cmd
+REM Create database (replace <mysql_user> and <db_name> as needed)
+mysql -u <mysql_user> -p -e "CREATE DATABASE IF NOT EXISTS <db_name>;"
+mysql -u <mysql_user> -p <db_name> < backend\schema.sql
+```
+
+### 2) Configure backend environment
+
+```cmd
+REM Copy .env.example to backend/.env
+copy .env.example backend\.env
+```
+
+Edit `backend/.env` with your MySQL credentials and settings.
+
+### 3) Set up backend Python environment
+
+```cmd
+REM Create virtual environment
+python -m venv .venv
+
+REM Activate venv (Command Prompt)
+.venv\Scripts\activate
+
+REM Or activate venv (PowerShell)
+.venv\Scripts\Activate.ps1
+
+REM Install dependencies
+pip install -r backend\requirements.txt
+```
+
+### 4) Set up frontend dependencies
+
+```cmd
+cd frontend
+npm install
+cd ..
+```
+
+### 5) Run in development mode (two terminals)
+
+Open two terminals:
+
+**Terminal A (backend):**
+
+```cmd
+.venv\Scripts\activate
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
+```
+
+**Terminal B (frontend):**
+
+```cmd
+cd frontend
+npm run dev
+```
+
+Open: `http://localhost:5173` in your browser.
+
+---
+
 ### 1) Create and load database schema
 
 ```bash
