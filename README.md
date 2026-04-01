@@ -1,3 +1,60 @@
+## Quick start (Linux/macOS)
+
+All commands below assume you are in the project root directory. Use your terminal (bash/zsh/fish/etc).
+
+### 1) Create and load database schema
+
+```bash
+# Create database (replace <mysql_user> and <db_name> as needed)
+mysql -u <mysql_user> -p -e "CREATE DATABASE IF NOT EXISTS <db_name>;"
+mysql -u <mysql_user> -p <db_name> < backend/schema.sql
+```
+
+### 2) Configure backend environment
+
+```bash
+cp .env.example backend/.env
+```
+
+Edit `backend/.env` with your MySQL credentials and settings.
+
+### 3) Set up backend Python environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+### 4) Set up frontend dependencies
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+### 5) Run in development mode (two terminals)
+
+Open two terminals:
+
+**Terminal A (backend):**
+
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
+```
+
+**Terminal B (frontend):**
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open: `http://localhost:5173` in your browser.
+
+---
 # University Accommodation Office Application
 
 A full-stack DBMS course project built with MySQL + FastAPI + React.
