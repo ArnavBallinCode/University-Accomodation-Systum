@@ -21,7 +21,7 @@ export function MetricCard({ label, value, helper, accent, index }: MetricCardPr
         stiffness: 260,
         damping: 20 
       }}
-      className="glass-panel relative overflow-hidden p-5"
+      className="group glass-panel relative overflow-hidden p-5"
     >
       <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-3xl transition-colors group-hover:bg-white/10" />
       <div className={`mb-4 h-1.5 w-12 rounded-full bg-gradient-to-r ${accent} shadow-sm`} />
