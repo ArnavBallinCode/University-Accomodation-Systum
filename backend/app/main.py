@@ -257,14 +257,9 @@ def report_hall_managers(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            h.hall_id,
-            h.hall_name,
-            CONCAT(s.first_name, ' ', s.last_name) AS manager_name,
-            COALESCE(s.internal_phone, '') AS manager_phone
-        FROM halls h
-        JOIN staff s ON s.staff_id = h.manager_staff_id
-        ORDER BY h.hall_id
+        SELECT hall_id, hall_name, manager_name, manager_phone
+        FROM v_hall_managers
+        ORDER BY hall_id
     """
     return _encode(_run_report(session, sql))
 
@@ -276,28 +271,21 @@ def report_student_leases(
 ) -> Any:
     sql = """
         SELECT
-            l.lease_id,
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            l.duration_semesters,
-            l.includes_summer_semester,
-            l.date_enter,
-            l.date_leave,
-            r.place_number,
-            r.room_number,
-            r.monthly_rent,
-            CASE WHEN r.hall_id IS NOT NULL THEN 'Hall' ELSE 'Apartment' END AS residence_type,
-            CASE WHEN r.hall_id IS NOT NULL THEN h.hall_name ELSE CONCAT('Apartment ', a.apartment_id) END AS residence_name,
-            CASE
-                WHEN r.hall_id IS NOT NULL THEN CONCAT(h.street, ', ', h.city, ' ', h.postcode)
-                ELSE CONCAT(a.street, ', ', a.city, ' ', a.postcode)
-            END AS residence_address
-        FROM leases l
-        JOIN students s ON s.banner_id = l.banner_id
-        JOIN rooms r ON r.place_number = l.place_number
-        LEFT JOIN halls h ON h.hall_id = r.hall_id
-        LEFT JOIN apartments a ON a.apartment_id = r.apartment_id
-        ORDER BY s.banner_id, l.lease_id
+            lease_id,
+            banner_id,
+            student_name,
+            duration_semesters,
+            includes_summer_semester,
+            date_enter,
+            date_leave,
+            place_number,
+            room_number,
+            monthly_rent,
+            residence_type,
+            residence_name,
+            residence_address
+        FROM v_student_leases
+        ORDER BY banner_id, lease_id
     """
     return _encode(_run_report(session, sql))
 
@@ -309,29 +297,21 @@ def report_summer_leases(
 ) -> Any:
     sql = """
         SELECT
-            l.lease_id,
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            l.duration_semesters,
-            l.includes_summer_semester,
-            l.date_enter,
-            l.date_leave,
-            r.place_number,
-            r.room_number,
-            r.monthly_rent,
-            CASE WHEN r.hall_id IS NOT NULL THEN 'Hall' ELSE 'Apartment' END AS residence_type,
-            CASE WHEN r.hall_id IS NOT NULL THEN h.hall_name ELSE CONCAT('Apartment ', a.apartment_id) END AS residence_name,
-            CASE
-                WHEN r.hall_id IS NOT NULL THEN CONCAT(h.street, ', ', h.city, ' ', h.postcode)
-                ELSE CONCAT(a.street, ', ', a.city, ' ', a.postcode)
-            END AS residence_address
-        FROM leases l
-        JOIN students s ON s.banner_id = l.banner_id
-        JOIN rooms r ON r.place_number = l.place_number
-        LEFT JOIN halls h ON h.hall_id = r.hall_id
-        LEFT JOIN apartments a ON a.apartment_id = r.apartment_id
-        WHERE l.includes_summer_semester = TRUE
-        ORDER BY l.lease_id
+            lease_id,
+            banner_id,
+            student_name,
+            duration_semesters,
+            includes_summer_semester,
+            date_enter,
+            date_leave,
+            place_number,
+            room_number,
+            monthly_rent,
+            residence_type,
+            residence_name,
+            residence_address
+        FROM v_summer_leases
+        ORDER BY lease_id
     """
     return _encode(_run_report(session, sql))
 
@@ -343,15 +323,9 @@ def report_student_rent_paid(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            SUM(CASE WHEN i.date_paid IS NOT NULL THEN i.amount_due ELSE 0 END) AS total_paid
-        FROM students s
-        LEFT JOIN leases l ON l.banner_id = s.banner_id
-        LEFT JOIN invoices i ON i.lease_id = l.lease_id
-        WHERE s.banner_id = :banner_id
-        GROUP BY s.banner_id, s.first_name, s.last_name
+        SELECT banner_id, student_name, total_paid
+        FROM v_student_rent_paid
+        WHERE banner_id = :banner_id
     """
     rows = _run_report(session, sql, {"banner_id": banner_id})
     if not rows:
@@ -369,29 +343,20 @@ def report_unpaid_invoices(
 
     sql = """
         SELECT
-            i.invoice_id,
-            i.lease_id,
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            i.semester,
-            i.amount_due,
-            DATE_FORMAT(i.due_date, '%Y-%m-%d') AS due_date,
-            r.place_number,
-            r.room_number,
-            CASE WHEN r.hall_id IS NOT NULL THEN 'Hall' ELSE 'Apartment' END AS residence_type,
-            CASE
-                WHEN r.hall_id IS NOT NULL THEN CONCAT(h.street, ', ', h.city, ' ', h.postcode)
-                ELSE CONCAT(a.street, ', ', a.city, ' ', a.postcode)
-            END AS residence_address
-        FROM invoices i
-        JOIN leases l ON l.lease_id = i.lease_id
-        JOIN students s ON s.banner_id = l.banner_id
-        JOIN rooms r ON r.place_number = l.place_number
-        LEFT JOIN halls h ON h.hall_id = r.hall_id
-        LEFT JOIN apartments a ON a.apartment_id = r.apartment_id
-        WHERE i.date_paid IS NULL
-          AND i.due_date <= :due_before
-        ORDER BY i.invoice_id
+            invoice_id,
+            lease_id,
+            banner_id,
+            student_name,
+            semester,
+            amount_due,
+            DATE_FORMAT(due_date, '%Y-%m-%d') AS due_date,
+            place_number,
+            room_number,
+            residence_type,
+            residence_address
+        FROM v_unpaid_invoices
+        WHERE due_date <= :due_before
+        ORDER BY invoice_id
     """
     return _encode(_run_report(session, sql, {"due_before": effective_due}))
 
@@ -403,15 +368,13 @@ def report_unsatisfactory_inspections(
 ) -> Any:
     sql = """
         SELECT
-            i.inspection_id,
-            DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
-            CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
-            i.apartment_id,
-            COALESCE(i.comments, '') AS comments
-        FROM inspections i
-        JOIN staff s ON s.staff_id = i.staff_id
-        WHERE i.is_satisfactory = FALSE
-        ORDER BY i.inspection_date DESC
+            inspection_id,
+            DATE_FORMAT(inspection_date, '%Y-%m-%d') AS inspection_date,
+            staff_name,
+            apartment_id,
+            comments
+        FROM v_unsatisfactory_inspections
+        ORDER BY inspection_date DESC
     """
     return _encode(_run_report(session, sql))
 
@@ -424,17 +387,14 @@ def report_hall_student_rooms(
 ) -> Any:
     sql = """
         SELECT
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            h.hall_name,
-            r.room_number,
-            r.place_number
-        FROM leases l
-        JOIN students s ON s.banner_id = l.banner_id
-        JOIN rooms r ON r.place_number = l.place_number
-        JOIN halls h ON h.hall_id = r.hall_id
-        WHERE h.hall_id = :hall_id
-        ORDER BY s.banner_id
+            banner_id,
+            student_name,
+            hall_name,
+            room_number,
+            place_number
+        FROM v_hall_student_rooms
+        WHERE hall_id = :hall_id
+        ORDER BY banner_id
     """
     return _encode(_run_report(session, sql, {"hall_id": hall_id}))
 
@@ -465,8 +425,7 @@ def report_waiting_list(
             minor,
             course_number,
             advisor_staff_id
-        FROM students
-        WHERE status = 'Waiting'
+        FROM v_waiting_list
         ORDER BY banner_id
     """
     return _encode(_run_report(session, sql))
@@ -478,9 +437,8 @@ def report_student_category_counts(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT category, COUNT(*) AS student_count
-        FROM students
-        GROUP BY category
+        SELECT category, student_count
+        FROM v_student_category_counts
         ORDER BY category
     """
     return _encode(_run_report(session, sql))
@@ -492,13 +450,9 @@ def report_students_without_kin(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name
-        FROM students s
-        LEFT JOIN next_of_kin n ON n.banner_id = s.banner_id
-        WHERE n.kin_id IS NULL
-        ORDER BY s.banner_id
+        SELECT banner_id, student_name
+        FROM v_students_without_kin
+        ORDER BY banner_id
     """
     return _encode(_run_report(session, sql))
 
@@ -510,14 +464,9 @@ def report_student_adviser(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            s.banner_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-            CASE WHEN a.staff_id IS NULL THEN '' ELSE CONCAT(a.first_name, ' ', a.last_name) END AS adviser_name,
-            COALESCE(a.internal_phone, '') AS adviser_phone
-        FROM students s
-        LEFT JOIN staff a ON a.staff_id = s.advisor_staff_id
-        WHERE s.banner_id = :banner_id
+        SELECT banner_id, student_name, adviser_name, adviser_phone
+        FROM v_student_advisers
+        WHERE banner_id = :banner_id
     """
     rows = _run_report(session, sql, {"banner_id": banner_id})
     if not rows:
@@ -531,12 +480,8 @@ def report_rent_stats(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            MIN(monthly_rent) AS min_rent,
-            MAX(monthly_rent) AS max_rent,
-            AVG(monthly_rent) AS avg_rent
-        FROM rooms
-        WHERE hall_id IS NOT NULL
+        SELECT min_rent, max_rent, avg_rent
+        FROM v_hall_rent_stats
     """
     rows = _run_report(session, sql)
     return _encode(rows[0] if rows else {"min_rent": None, "max_rent": None, "avg_rent": None})
@@ -548,14 +493,9 @@ def report_hall_place_counts(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            h.hall_id,
-            h.hall_name,
-            COUNT(r.place_number) AS total_places
-        FROM halls h
-        LEFT JOIN rooms r ON r.hall_id = h.hall_id
-        GROUP BY h.hall_id, h.hall_name
-        ORDER BY h.hall_id
+        SELECT hall_id, hall_name, total_places
+        FROM v_hall_place_counts
+        ORDER BY hall_id
     """
     return _encode(_run_report(session, sql))
 
@@ -566,15 +506,9 @@ def report_senior_staff(
     session: Session = Depends(get_session),
 ) -> Any:
     sql = """
-        SELECT
-            s.staff_id,
-            CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
-            TIMESTAMPDIFF(YEAR, s.dob, CURDATE()) AS age,
-            s.location
-        FROM staff s
-        WHERE s.dob IS NOT NULL
-          AND TIMESTAMPDIFF(YEAR, s.dob, CURDATE()) > 60
-        ORDER BY age DESC, s.staff_id
+        SELECT staff_id, staff_name, age, location
+        FROM v_senior_staff
+        ORDER BY age DESC, staff_id
     """
     return _encode(_run_report(session, sql))
 

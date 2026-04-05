@@ -231,3 +231,202 @@ CREATE TABLE inspections (
 CREATE INDEX idx_inspections_apartment_id ON inspections(apartment_id);
 CREATE INDEX idx_inspections_staff_id ON inspections(staff_id);
 CREATE INDEX idx_inspections_sat ON inspections(is_satisfactory);
+
+DROP VIEW IF EXISTS v_senior_staff;
+DROP VIEW IF EXISTS v_hall_place_counts;
+DROP VIEW IF EXISTS v_hall_rent_stats;
+DROP VIEW IF EXISTS v_student_advisers;
+DROP VIEW IF EXISTS v_students_without_kin;
+DROP VIEW IF EXISTS v_student_category_counts;
+DROP VIEW IF EXISTS v_waiting_list;
+DROP VIEW IF EXISTS v_hall_student_rooms;
+DROP VIEW IF EXISTS v_unsatisfactory_inspections;
+DROP VIEW IF EXISTS v_unpaid_invoices;
+DROP VIEW IF EXISTS v_student_rent_paid;
+DROP VIEW IF EXISTS v_summer_leases;
+DROP VIEW IF EXISTS v_student_leases;
+DROP VIEW IF EXISTS v_hall_managers;
+
+CREATE VIEW v_hall_managers AS
+SELECT
+    h.hall_id,
+    h.hall_name,
+    CONCAT(s.first_name, ' ', s.last_name) AS manager_name,
+    COALESCE(s.internal_phone, '') AS manager_phone
+FROM halls h
+JOIN staff s ON s.staff_id = h.manager_staff_id;
+
+CREATE VIEW v_student_leases AS
+SELECT
+    l.lease_id,
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    l.duration_semesters,
+    l.includes_summer_semester,
+    l.date_enter,
+    l.date_leave,
+    r.place_number,
+    r.room_number,
+    r.monthly_rent,
+    CASE WHEN r.hall_id IS NOT NULL THEN 'Hall' ELSE 'Apartment' END AS residence_type,
+    CASE WHEN r.hall_id IS NOT NULL THEN h.hall_name ELSE CONCAT('Apartment ', a.apartment_id) END AS residence_name,
+    CASE
+        WHEN r.hall_id IS NOT NULL THEN CONCAT(h.street, ', ', h.city, ' ', h.postcode)
+        ELSE CONCAT(a.street, ', ', a.city, ' ', a.postcode)
+    END AS residence_address
+FROM leases l
+JOIN students s ON s.banner_id = l.banner_id
+JOIN rooms r ON r.place_number = l.place_number
+LEFT JOIN halls h ON h.hall_id = r.hall_id
+LEFT JOIN apartments a ON a.apartment_id = r.apartment_id;
+
+CREATE VIEW v_summer_leases AS
+SELECT
+    lease_id,
+    banner_id,
+    student_name,
+    duration_semesters,
+    includes_summer_semester,
+    date_enter,
+    date_leave,
+    place_number,
+    room_number,
+    monthly_rent,
+    residence_type,
+    residence_name,
+    residence_address
+FROM v_student_leases
+WHERE includes_summer_semester = TRUE;
+
+CREATE VIEW v_student_rent_paid AS
+SELECT
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    COALESCE(SUM(CASE WHEN i.date_paid IS NOT NULL THEN i.amount_due ELSE 0 END), 0) AS total_paid
+FROM students s
+LEFT JOIN leases l ON l.banner_id = s.banner_id
+LEFT JOIN invoices i ON i.lease_id = l.lease_id
+GROUP BY s.banner_id, s.first_name, s.last_name;
+
+CREATE VIEW v_unpaid_invoices AS
+SELECT
+    i.invoice_id,
+    i.lease_id,
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    i.semester,
+    i.amount_due,
+    i.due_date,
+    r.place_number,
+    r.room_number,
+    CASE WHEN r.hall_id IS NOT NULL THEN 'Hall' ELSE 'Apartment' END AS residence_type,
+    CASE
+        WHEN r.hall_id IS NOT NULL THEN CONCAT(h.street, ', ', h.city, ' ', h.postcode)
+        ELSE CONCAT(a.street, ', ', a.city, ' ', a.postcode)
+    END AS residence_address
+FROM invoices i
+JOIN leases l ON l.lease_id = i.lease_id
+JOIN students s ON s.banner_id = l.banner_id
+JOIN rooms r ON r.place_number = l.place_number
+LEFT JOIN halls h ON h.hall_id = r.hall_id
+LEFT JOIN apartments a ON a.apartment_id = r.apartment_id
+WHERE i.date_paid IS NULL;
+
+CREATE VIEW v_unsatisfactory_inspections AS
+SELECT
+    i.inspection_id,
+    i.inspection_date,
+    CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
+    i.apartment_id,
+    COALESCE(i.comments, '') AS comments
+FROM inspections i
+JOIN staff s ON s.staff_id = i.staff_id
+WHERE i.is_satisfactory = FALSE;
+
+CREATE VIEW v_hall_student_rooms AS
+SELECT
+    h.hall_id,
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    h.hall_name,
+    r.room_number,
+    r.place_number
+FROM leases l
+JOIN students s ON s.banner_id = l.banner_id
+JOIN rooms r ON r.place_number = l.place_number
+JOIN halls h ON h.hall_id = r.hall_id;
+
+CREATE VIEW v_waiting_list AS
+SELECT
+    banner_id,
+    first_name,
+    last_name,
+    street,
+    city,
+    postcode,
+    mobile_phone,
+    email,
+    dob,
+    gender,
+    category,
+    nationality,
+    special_needs,
+    comments,
+    status,
+    major,
+    minor,
+    course_number,
+    advisor_staff_id
+FROM students
+WHERE status = 'Waiting';
+
+CREATE VIEW v_student_category_counts AS
+SELECT
+    category,
+    COUNT(*) AS student_count
+FROM students
+GROUP BY category;
+
+CREATE VIEW v_students_without_kin AS
+SELECT
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name
+FROM students s
+LEFT JOIN next_of_kin n ON n.banner_id = s.banner_id
+WHERE n.kin_id IS NULL;
+
+CREATE VIEW v_student_advisers AS
+SELECT
+    s.banner_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    CASE WHEN a.staff_id IS NULL THEN '' ELSE CONCAT(a.first_name, ' ', a.last_name) END AS adviser_name,
+    COALESCE(a.internal_phone, '') AS adviser_phone
+FROM students s
+LEFT JOIN staff a ON a.staff_id = s.advisor_staff_id;
+
+CREATE VIEW v_hall_rent_stats AS
+SELECT
+    MIN(monthly_rent) AS min_rent,
+    MAX(monthly_rent) AS max_rent,
+    AVG(monthly_rent) AS avg_rent
+FROM rooms
+WHERE hall_id IS NOT NULL;
+
+CREATE VIEW v_hall_place_counts AS
+SELECT
+    h.hall_id,
+    h.hall_name,
+    COUNT(r.place_number) AS total_places
+FROM halls h
+LEFT JOIN rooms r ON r.hall_id = h.hall_id
+GROUP BY h.hall_id, h.hall_name;
+
+CREATE VIEW v_senior_staff AS
+SELECT
+    s.staff_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
+    TIMESTAMPDIFF(YEAR, s.dob, CURDATE()) AS age,
+    s.location
+FROM staff s
+WHERE s.dob IS NOT NULL
+  AND TIMESTAMPDIFF(YEAR, s.dob, CURDATE()) > 60;

@@ -142,6 +142,9 @@ export function ReportsPage(): JSX.Element {
                   <div>
                     <p className="font-heading text-xs font-black uppercase tracking-[0.16em] text-slate-500">({report.id}) {report.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{report.description}</p>
+                    <p className="mt-2 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      {report.dbms.objectType} {report.dbms.objectName}
+                    </p>
                   </div>
                   {isActive && (
                     <span className="rounded-full border border-cyan-300 bg-cyan-100 px-2 py-1 text-xs font-bold uppercase tracking-[0.1em] text-cyan-700">
@@ -199,6 +202,25 @@ export function ReportsPage(): JSX.Element {
               {rows.length} rows
             </span>
           </div>
+        </div>
+
+        <div className="mb-4 rounded-2xl border border-slate-300/70 bg-slate-900/90 p-4 text-slate-100 shadow-glow">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-heading text-xs font-black uppercase tracking-[0.16em] text-cyan-300">DBMS Proof Block</p>
+            <span className="rounded-full border border-cyan-300/70 bg-cyan-500/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.08em] text-cyan-200">
+              {activeReport.dbms.objectType} {activeReport.dbms.objectName}
+            </span>
+          </div>
+
+          <p className="mt-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-300">Workbench query</p>
+          <pre className="mt-2 overflow-x-auto rounded-xl border border-slate-700 bg-slate-950/80 p-3 font-mono text-xs text-emerald-200">
+            {activeReport.dbms.workbenchQuery}
+          </pre>
+
+          <p className="mt-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-300">Route query used by backend</p>
+          <pre className="mt-2 overflow-x-auto rounded-xl border border-slate-700 bg-slate-950/80 p-3 font-mono text-xs text-amber-200">
+            {activeReport.dbms.routeQuery}
+          </pre>
         </div>
 
         <div className="table-shell overflow-x-auto">

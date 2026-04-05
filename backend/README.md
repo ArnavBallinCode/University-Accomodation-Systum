@@ -22,7 +22,7 @@ From repository root:
 python -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
-cp .env.example backend/.env
+cp backend/.env.example backend/.env
 ```
 
 Edit `backend/.env` values for your MySQL instance.

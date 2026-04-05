@@ -38,6 +38,13 @@ export interface ReportParameter {
   placeholder?: string;
 }
 
+export interface ReportDbmsMapping {
+  objectType: "VIEW";
+  objectName: string;
+  workbenchQuery: string;
+  routeQuery: string;
+}
+
 export interface ReportDefinition {
   id: string;
   title: string;
@@ -46,4 +53,5 @@ export interface ReportDefinition {
   method: "GET";
   accent: string;
   parameters?: ReportParameter[];
+  dbms: ReportDbmsMapping;
 }
