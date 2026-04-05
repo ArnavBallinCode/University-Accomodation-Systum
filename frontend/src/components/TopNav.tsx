@@ -6,10 +6,10 @@ import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
 
 const navItems = [
-  { to: "/", label: "Neon Lobby", icon: Rocket },
-  { to: "/studio", label: "Entity Forge", icon: Database },
-  { to: "/reports", label: "Report Reactor", icon: Radar },
-  { to: "/pulse", label: "Pulse Board", icon: Gauge }
+  { to: "/", label: "Dashboard", icon: Rocket },
+  { to: "/studio", label: "Entity Management", icon: Database },
+  { to: "/reports", label: "Reports", icon: Radar },
+  { to: "/pulse", label: "Analytics", icon: Gauge }
 ];
 
 function roleTone(role: "admin" | "manager" | "viewer"): string {
@@ -30,11 +30,11 @@ export function TopNav(): JSX.Element {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 md:px-8">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="font-heading text-xs font-black uppercase tracking-[0.3em] text-orange-500">Accommodation HyperDeck</p>
-            <h1 className="font-heading text-xl font-black text-slate-900 md:text-2xl">Residence Command Universe</h1>
+            <p className="font-heading text-xs font-black uppercase tracking-[0.25em] text-orange-500">University Accommodation System</p>
+            <h1 className="font-heading text-xl font-black text-slate-900 md:text-2xl">Operations Console</h1>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -44,7 +44,7 @@ export function TopNav(): JSX.Element {
               className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-700 shadow-mint transition hover:-translate-y-0.5"
             >
               {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-              {isDark ? "Light" : "Dark"}
+              {isDark ? "Light mode" : "Dark mode"}
             </button>
 
             {user && (
@@ -65,34 +65,32 @@ export function TopNav(): JSX.Element {
               <LogOut className="h-4 w-4" />
               Logout
             </button>
-
-            <div className="rounded-full border border-white/80 bg-white/80 px-3 py-1 font-mono text-xs text-slate-700 shadow-mint">
-              React + TS + Tailwind
-            </div>
           </div>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "group inline-flex items-center gap-2 rounded-full border px-3 py-2 font-heading text-xs font-bold uppercase tracking-[0.16em] transition",
-                    isActive
-                      ? "border-orange-300 bg-gradient-to-r from-orange-200/80 to-cyan-200/90 text-slate-900 shadow-glow"
-                      : "border-slate-300/70 bg-white/60 text-slate-700 hover:border-orange-300 hover:text-slate-900"
-                  )
-                }
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            );
-          })}
+        <nav className="-mx-1 overflow-x-auto px-1 pb-1">
+          <div className="flex min-w-max items-center gap-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      "group inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 font-heading text-xs font-bold uppercase tracking-[0.12em] transition",
+                      isActive
+                        ? "border-orange-300 bg-gradient-to-r from-orange-200/80 to-cyan-200/90 text-slate-900 shadow-glow"
+                        : "border-slate-300/70 bg-white/60 text-slate-700 hover:border-orange-300 hover:text-slate-900"
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </div>
         </nav>
       </div>
     </header>

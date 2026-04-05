@@ -52,11 +52,21 @@ export const REPORTS: ReportDefinition[] = [
     endpoint: "/api/reports/student-rent-paid/:banner_id",
     method: "GET",
     accent: "from-rose-300 to-red-300",
-    parameters: [{ key: "banner_id", label: "Banner ID", in: "path", type: "text", required: true }],
+    parameters: [
+      {
+        key: "banner_id",
+        label: "Banner ID",
+        in: "path",
+        type: "text",
+        required: true,
+        placeholder: "B00123456",
+        defaultValue: "B00123456"
+      }
+    ],
     dbms: {
       objectType: "VIEW",
       objectName: "v_student_rent_paid",
-      workbenchQuery: "SELECT * FROM v_student_rent_paid WHERE banner_id = 'B001';",
+      workbenchQuery: "SELECT * FROM v_student_rent_paid WHERE banner_id = 'B00123456';",
       routeQuery: "SELECT banner_id, student_name, total_paid FROM v_student_rent_paid WHERE banner_id = :banner_id"
     }
   },
@@ -74,7 +84,8 @@ export const REPORTS: ReportDefinition[] = [
         in: "query",
         type: "date",
         required: false,
-        placeholder: "YYYY-MM-DD"
+        placeholder: "YYYY-MM-DD",
+        defaultValue: "2028-12-31"
       }
     ],
     dbms: {
@@ -107,7 +118,17 @@ export const REPORTS: ReportDefinition[] = [
     endpoint: "/api/reports/hall-student-rooms/:hall_id",
     method: "GET",
     accent: "from-teal-300 to-cyan-300",
-    parameters: [{ key: "hall_id", label: "Hall ID", in: "path", type: "number", required: true }],
+    parameters: [
+      {
+        key: "hall_id",
+        label: "Hall ID",
+        in: "path",
+        type: "number",
+        required: true,
+        placeholder: "1",
+        defaultValue: "1"
+      }
+    ],
     dbms: {
       objectType: "VIEW",
       objectName: "v_hall_student_rooms",
@@ -166,11 +187,21 @@ export const REPORTS: ReportDefinition[] = [
     endpoint: "/api/reports/student-adviser/:banner_id",
     method: "GET",
     accent: "from-indigo-300 to-cyan-300",
-    parameters: [{ key: "banner_id", label: "Banner ID", in: "path", type: "text", required: true }],
+    parameters: [
+      {
+        key: "banner_id",
+        label: "Banner ID",
+        in: "path",
+        type: "text",
+        required: true,
+        placeholder: "B00123456",
+        defaultValue: "B00123456"
+      }
+    ],
     dbms: {
       objectType: "VIEW",
       objectName: "v_student_advisers",
-      workbenchQuery: "SELECT * FROM v_student_advisers WHERE banner_id = 'B001';",
+      workbenchQuery: "SELECT * FROM v_student_advisers WHERE banner_id = 'B00123456';",
       routeQuery:
         "SELECT banner_id, student_name, adviser_name, adviser_phone FROM v_student_advisers WHERE banner_id = :banner_id"
     }

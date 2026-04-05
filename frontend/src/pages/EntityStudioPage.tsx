@@ -275,7 +275,7 @@ export function EntityStudioPage(): JSX.Element {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div>
-              <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-orange-600">Entity Forge</p>
+              <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-orange-600">Entity Management</p>
               <h2 className="font-heading text-xl font-black text-slate-900 md:text-2xl">Dynamic CRUD cockpit</h2>
             </div>
 
@@ -403,7 +403,7 @@ export function EntityStudioPage(): JSX.Element {
       </section>
 
 
-      <section className="glass-panel p-5 md:p-6">
+      <section className="glass-panel min-w-0 p-5 md:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-700">Data stream</p>
@@ -418,16 +418,16 @@ export function EntityStudioPage(): JSX.Element {
           />
         </div>
 
-        <div className="table-shell overflow-x-auto">
+        <div className="table-shell w-full max-h-[34rem] overflow-auto">
           <table className="min-w-full text-left text-sm text-slate-700">
             <thead>
               <tr className="border-b border-white/70">
                 {columns.map((column) => (
-                  <th key={column} className="whitespace-nowrap px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  <th key={column} className="sticky top-0 z-10 whitespace-nowrap bg-white/85 px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500 backdrop-blur">
                     {titleCase(column)}
                   </th>
                 ))}
-                <th className="px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500">Actions</th>
+                <th className="sticky top-0 z-10 bg-white/85 px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500 backdrop-blur">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -453,7 +453,7 @@ export function EntityStudioPage(): JSX.Element {
                     className="border-b border-white/60"
                   >
                     {columns.map((column) => (
-                      <td key={`${String(record[activeEntity.idKey])}-${column}`} className="px-3 py-2 align-top">
+                      <td key={`${String(record[activeEntity.idKey])}-${column}`} className="max-w-[20rem] px-3 py-2 align-top break-words">
                         {formatCellValue(record[column])}
                       </td>
                     ))}

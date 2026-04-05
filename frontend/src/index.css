@@ -71,11 +71,17 @@ body {
 }
 
 .table-shell {
+  width: 100%;
+  max-width: 100%;
   border-radius: 1rem;
   border: 1px solid var(--table-border);
   background: var(--table-bg);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.table-shell > table {
+  min-width: 100%;
 }
 
 /* Premium Scrollbars */

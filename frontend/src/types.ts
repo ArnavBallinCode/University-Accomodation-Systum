@@ -36,6 +36,7 @@ export interface ReportParameter {
   type: "text" | "number" | "date";
   required?: boolean;
   placeholder?: string;
+  defaultValue?: string;
 }
 
 export interface ReportDbmsMapping {

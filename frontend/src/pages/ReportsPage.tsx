@@ -10,6 +10,26 @@ import type { DataRow, ReportDefinition } from "../types";
 
 type ParamState = Record<string, Record<string, string>>;
 
+function buildInitialParamState(): ParamState {
+  const initial: ParamState = {};
+
+  for (const report of REPORTS) {
+    const defaults: Record<string, string> = {};
+
+    for (const parameter of report.parameters ?? []) {
+      if (parameter.defaultValue) {
+        defaults[parameter.key] = parameter.defaultValue;
+      }
+    }
+
+    if (Object.keys(defaults).length > 0) {
+      initial[report.id] = defaults;
+    }
+  }
+
+  return initial;
+}
+
 function normalizeRows(payload: unknown): DataRow[] {
   if (Array.isArray(payload)) {
     return payload as DataRow[];
@@ -53,10 +73,11 @@ function buildEndpoint(report: ReportDefinition, params: Record<string, string>)
 }
 
 export function ReportsPage(): JSX.Element {
-  const [paramState, setParamState] = useState<ParamState>({});
+  const [paramState, setParamState] = useState<ParamState>(() => buildInitialParamState());
   const [activeReportId, setActiveReportId] = useState<string>(REPORTS[0].id);
   const [rows, setRows] = useState<DataRow[]>([]);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [hasRun, setHasRun] = useState<boolean>(false);
   const { pushToast } = useToast();
 
   const activeReport = useMemo(
@@ -93,10 +114,14 @@ export function ReportsPage(): JSX.Element {
     }
 
     setRunningId(report.id);
+    setActiveReportId(report.id);
+    setRows([]);
+    setHasRun(false);
+
     try {
       const payload = await apiGet<unknown>(endpoint);
       setRows(normalizeRows(payload));
-      setActiveReportId(report.id);
+      setHasRun(true);
       pushToast({
         tone: "success",
         title: `Report ${report.id.toUpperCase()} complete`,
@@ -108,16 +133,24 @@ export function ReportsPage(): JSX.Element {
         title: `Report ${report.id.toUpperCase()} failed`,
         description: error instanceof Error ? error.message : "Unexpected API failure."
       });
+      setHasRun(true);
     } finally {
       setRunningId(null);
     }
   };
 
+  const emptyMessage =
+    runningId !== null
+      ? "Running report..."
+      : hasRun
+        ? "No rows returned for this report and parameter set. Try a different parameter value."
+        : "Run a report to view results here.";
+
   return (
-    <div className="grid gap-6 pb-8 xl:grid-cols-[1fr_1.35fr]">
-      <section className="glass-panel p-5 md:p-6">
+    <div className="grid min-w-0 items-start gap-6 pb-8 xl:grid-cols-[1fr_1.35fr]">
+      <section className="glass-panel min-w-0 p-5 md:p-6">
         <div className="mb-5">
-          <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-700">Report Reactor</p>
+          <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-cyan-700">Reports</p>
           <h2 className="font-heading text-2xl font-black text-slate-900">Assignment reports (a-n)</h2>
           <p className="mt-2 text-sm text-slate-600">
             Trigger any required report endpoint with on-card parameter controls and instant table rendering.
@@ -190,7 +223,7 @@ export function ReportsPage(): JSX.Element {
         </div>
       </section>
 
-      <section className="glass-panel p-5 md:p-6">
+      <section className="glass-panel min-w-0 p-5 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="font-heading text-xs font-black uppercase tracking-[0.2em] text-orange-600">Result Surface</p>
@@ -223,12 +256,12 @@ export function ReportsPage(): JSX.Element {
           </pre>
         </div>
 
-        <div className="table-shell overflow-x-auto">
+        <div className="table-shell w-full max-h-[34rem] overflow-auto">
           <table className="min-w-full text-left text-sm text-slate-700">
             <thead>
               <tr className="border-b border-white/70">
                 {columns.map((column) => (
-                  <th key={column} className="px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  <th key={column} className="sticky top-0 z-10 bg-white/85 px-3 py-2 font-heading text-xs font-black uppercase tracking-[0.14em] text-slate-500 backdrop-blur">
                     {titleCase(column)}
                   </th>
                 ))}
@@ -238,14 +271,14 @@ export function ReportsPage(): JSX.Element {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={Math.max(columns.length, 1)} className="px-3 py-8 text-center text-slate-500">
-                    Run a report to view results here.
+                    {emptyMessage}
                   </td>
                 </tr>
               ) : (
                 rows.map((row, rowIndex) => (
                   <tr key={`${rowIndex}-${activeReport.id}`} className="border-b border-white/60">
                     {columns.map((column) => (
-                      <td key={`${rowIndex}-${column}`} className="px-3 py-2 align-top">
+                      <td key={`${rowIndex}-${column}`} className="max-w-[20rem] px-3 py-2 align-top break-words">
                         {row[column] === null || row[column] === undefined || row[column] === ""
                           ? "-"
                           : String(row[column])}
