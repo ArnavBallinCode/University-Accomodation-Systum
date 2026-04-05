@@ -6,6 +6,7 @@ from urllib.parse import quote_plus
 from fastapi import HTTPException
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import Settings, get_settings
@@ -68,13 +69,16 @@ def get_engine() -> Engine:
     global _engine
     if _engine is None:
         settings = get_settings()
-        _engine = create_engine(
-            _build_mysql_url(settings),
-            pool_pre_ping=True,
-            pool_recycle=300,
-            connect_args=_build_connect_args(settings),
-            future=True,
-        )
+        try:
+            _engine = create_engine(
+                _build_mysql_url(settings),
+                pool_pre_ping=True,
+                pool_recycle=300,
+                connect_args=_build_connect_args(settings),
+                future=True,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"failed to create DB engine: {exc}") from exc
     return _engine
 
 
@@ -83,8 +87,8 @@ def get_session() -> Iterator[Session]:
     if _session_factory is None:
         try:
             _session_factory = sessionmaker(bind=get_engine(), autoflush=False, autocommit=False, future=True)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"database configuration error: {exc}") from exc
 
     session = _session_factory()
     try:
@@ -97,7 +101,10 @@ def get_metadata() -> MetaData:
     global _metadata
     if _metadata is None:
         metadata = MetaData()
-        metadata.reflect(bind=get_engine(), only=TABLE_NAMES)
+        try:
+            metadata.reflect(bind=get_engine(), only=TABLE_NAMES)
+        except SQLAlchemyError as exc:
+            raise HTTPException(status_code=500, detail=f"failed to load database metadata: {exc}") from exc
         _metadata = metadata
     return _metadata
 
@@ -105,5 +112,11 @@ def get_metadata() -> MetaData:
 def get_table(table_name: str):
     metadata = get_metadata()
     if table_name not in metadata.tables:
-        raise RuntimeError(f"table {table_name!r} is not available in metadata")
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"table {table_name!r} is not available in database metadata. "
+                "Ensure the database specified by DB_NAME exists and that backend/schema.sql has been applied."
+            ),
+        )
     return metadata.tables[table_name]

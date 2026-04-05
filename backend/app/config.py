@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 
-load_dotenv()
+# Always load env from backend/.env regardless of the shell working directory.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_ROOT / ".env")
+load_dotenv(override=False)
 
 
 @dataclass(frozen=True)
