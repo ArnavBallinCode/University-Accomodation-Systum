@@ -1,0 +1,1021 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdftitle={University Accommodation Office System - CS266 Presentation Report},
+  pdfauthor={Team 24bcs001-24bcs007}
+}
+
+\setstretch{1.1}
+\setlist[itemize]{leftmargin=1.4em}
+\setlist[enumerate]{leftmargin=1.6em}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{CS266 DBMS Project Report}
+\fancyhead[R]{University Accommodation Office System}
+\fancyfoot[C]{\thepage}
+\setlength{\headheight}{14pt}
+
+\lstdefinestyle{codeblock}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!25},
+  backgroundcolor=\color{black!2},
+  keywordstyle=\color{blue!65!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{orange!60!black},
+  showstringspaces=false,
+  tabsize=2
+}
+
+\lstset{style=codeblock}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+
+{\LARGE\bfseries CS266 - Database Management Systems\par}
+\vspace{0.6cm}
+{\Large\bfseries University Accommodation Office Management System\par}
+\vspace{0.4cm}
+{\large Presentation and Technical Report (LaTeX)\par}
+
+\vspace{1.0cm}
+
+\begin{tabular}{ll}
+\textbf{Project Type:} & Full-stack DBMS Application \\
+\textbf{Frontend:} & React + TypeScript + Vite \\
+\textbf{Backend:} & FastAPI + SQLAlchemy Core \\
+\textbf{Database:} & MySQL 8+ \\
+\end{tabular}
+
+\vspace{1.2cm}
+
+{\large\bfseries Team Roll Numbers\par}
+\vspace{0.4cm}
+\begin{tabular}{c}
+24bcs001 \\
+24bcs002 \\
+24bcs003 \\
+24bcs004 \\
+24bcs005 \\
+24bcs006 \\
+24bcs007 \\
+\end{tabular}
+
+\vspace{1.4cm}
+
+{\large Date: \today\par}
+
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Executive Summary}
+This project is a complete University Accommodation Office Management System designed as a DBMS-centric full-stack application. It solves a practical institutional problem: tracking students, staff, housing inventory, leases, invoices, compliance inspections, and emergency contacts in one consistent relational system.
+
+The implementation is split into three layers:
+\begin{itemize}
+  \item \textbf{Database layer (MySQL):} normalized schema, constraints, triggers, indexes, and report views.
+  \item \textbf{Service layer (FastAPI + SQLAlchemy):} secure APIs for authentication, CRUD, and reporting.
+  \item \textbf{Presentation layer (React + TypeScript):} login, entity studio, dashboards, and report execution UI.
+\end{itemize}
+
+This report explains the project from scratch to deployment, including every process flow, all API operations, DB connectivity, transaction handling, and how ACID properties are realized in practice.
+
+\section{Problem Statement and Objectives}
+\subsection{Problem Context}
+Accommodation offices often suffer from fragmented data and manual workflows:
+\begin{itemize}
+  \item Student allocation data in spreadsheets.
+  \item Lease and invoice records in disconnected systems.
+  \item Slow or inconsistent reporting.
+  \item Weak integrity checks that allow invalid data.
+\end{itemize}
+
+\subsection{Project Objectives}
+\begin{enumerate}
+  \item Build a normalized relational schema for accommodation operations.
+  \item Provide secure, role-based APIs for operational workflows.
+  \item Support complete CRUD across all key entities.
+  \item Implement DBMS-style report queries via SQL views.
+  \item Provide a clean, modern frontend for daily usage.
+  \item Ensure data consistency through constraints, triggers, and transaction handling.
+\end{enumerate}
+
+\section{Complete Tech Stack}
+\subsection{Frontend}
+\begin{itemize}
+  \item React 18.3.1
+  \item TypeScript 5.7.2
+  \item Vite 6.2.1
+  \item React Router DOM 6.30.0
+  \item Tailwind CSS 3.4.17
+  \item Framer Motion 12.9.4
+  \item Lucide React 0.469.0
+\end{itemize}
+
+\subsection{Backend}
+\begin{itemize}
+  \item FastAPI 0.115.12
+  \item Uvicorn 0.34.0
+  \item SQLAlchemy 2.0.40 (Core style + reflection)
+  \item PyMySQL 1.1.1
+  \item python-dotenv 1.0.1
+  \item python-jose 3.4.0
+  \item passlib 1.7.4
+\end{itemize}
+
+\subsection{Database and Testing}
+\begin{itemize}
+  \item MySQL 8+ (or compatible managed MySQL)
+  \item pytest 8.3.5
+  \item httpx 0.28.1
+\end{itemize}
+
+\section{Repository Structure and Responsibilities}
+\begin{lstlisting}[language={},caption={Project layout at high level}]
+DBMS_courseproject/
+  backend/
+    app/
+      main.py       # FastAPI routes: auth, reports, generic CRUD
+      auth.py       # JWT auth, role checks, seeded users
+      config.py     # environment loading and settings parsing
+      database.py   # engine, session, metadata reflection
+    schema.sql      # tables, FKs, triggers, indexes, views
+    requirements.txt
+    tests/
+  frontend/
+    src/
+      lib/api.ts          # fetch wrapper + token injection
+      providers/AuthProvider.tsx
+      config/entities.ts  # UI metadata for all entities
+      config/reports.ts   # report catalog and parameters
+      pages/
+    vite.config.ts
+  seed.sql
+  docs/
+\end{lstlisting}
+
+\section{System Architecture from Start to End}
+\subsection{High-Level Flow}
+\begin{enumerate}
+  \item User interacts with frontend page (login, CRUD, reports).
+  \item Frontend calls API helper in \texttt{frontend/src/lib/api.ts}.
+  \item Request reaches FastAPI route in \texttt{backend/app/main.py}.
+  \item Dependencies validate token and role (if required).
+  \item Backend executes SQL via SQLAlchemy session.
+  \item MySQL returns result or constraint error.
+  \item Backend serializes response into JSON.
+  \item Frontend renders result in UI.
+\end{enumerate}
+
+\subsection{Development Proxy and Service Boundaries}
+Vite proxy routes local requests to backend:
+\begin{lstlisting}[language={},caption={Vite dev proxy}]
+proxy: {
+  "/api": "http://localhost:8000",
+  "/health": "http://localhost:8000",
+  "/auth": "http://localhost:8000"
+}
+\end{lstlisting}
+
+\section{Database Design (Relational Core)}
+\subsection{Primary Entities}
+The core schema contains 10 transactional tables:
+\begin{enumerate}
+  \item staff
+  \item courses
+  \item students
+  \item halls
+  \item apartments
+  \item rooms
+  \item leases
+  \item invoices
+  \item next\_of\_kin
+  \item inspections
+\end{enumerate}
+
+\subsection{ER Diagram Placeholder}
+\begin{figure}[h]
+\centering
+\fbox{%
+  \parbox[c][0.28\textheight][c]{0.90\textwidth}{%
+    \centering
+    \textbf{ER Diagram Placeholder}\\[0.6em]
+    Add your ER diagram image file at: \texttt{docs/figures/erd.png}\\
+    Replace this box with:\\
+    \texttt{\textbackslash includegraphics[width=0.95\textbackslash textwidth]\{docs/figures/erd.png\}}
+  }%
+}
+\caption{Entity Relationship Diagram (to be inserted)}
+\label{fig:erd-placeholder}
+\end{figure}
+
+\subsection{Important Relational Rules}
+\begin{itemize}
+  \item \textbf{students.course\_number} references courses with \texttt{ON DELETE SET NULL}.
+  \item \textbf{students.advisor\_staff\_id} references staff with \texttt{ON DELETE SET NULL}.
+  \item \textbf{leases.banner\_id} references students with \texttt{ON DELETE CASCADE}.
+  \item \textbf{invoices.lease\_id} references leases with \texttt{ON DELETE CASCADE}.
+  \item \textbf{next\_of\_kin.banner\_id} is UNIQUE, enforcing max one kin row per student.
+\end{itemize}
+
+\subsection{Data Integrity Controls}
+\begin{itemize}
+  \item Check constraints:
+  \begin{itemize}
+    \item apartment bedrooms in \{3,4,5\}
+    \item room monthly\_rent \(\ge 0\)
+    \item invoice amount\_due \(\ge 0\)
+  \end{itemize}
+  \item Trigger-based logic in \texttt{rooms}:
+  \begin{itemize}
+    \item exactly one of hall\_id or apartment\_id must be non-null
+    \item enforced on both INSERT and UPDATE
+  \end{itemize}
+\end{itemize}
+
+\subsection{Report Views (DBMS-Oriented)}
+The schema defines 14 views for report routes:
+\begin{itemize}
+  \item v\_hall\_managers, v\_student\_leases, v\_summer\_leases
+  \item v\_student\_rent\_paid, v\_unpaid\_invoices
+  \item v\_unsatisfactory\_inspections, v\_hall\_student\_rooms
+  \item v\_waiting\_list, v\_student\_category\_counts
+  \item v\_students\_without\_kin, v\_student\_advisers
+  \item v\_hall\_rent\_stats, v\_hall\_place\_counts, v\_senior\_staff
+\end{itemize}
+
+\section{How Backend is Connected to DB}
+\subsection{Environment Loading}
+\begin{lstlisting}[language=Python,caption={Environment initialization in config.py}]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_ROOT / ".env")
+load_dotenv(override=False)
+\end{lstlisting}
+
+\subsection{DB Settings Used}
+\begin{itemize}
+  \item \texttt{DB\_HOST}
+  \item \texttt{DB\_PORT}
+  \item \texttt{DB\_USER}
+  \item \texttt{DB\_PASSWORD}
+  \item \texttt{DB\_NAME}
+  \item \texttt{DB\_TLS\_MODE} (false, preferred, skip-verify)
+  \item \texttt{DB\_CA\_CERT\_PATH}
+\end{itemize}
+
+\subsection{SQLAlchemy + PyMySQL Connection URL}
+\begin{lstlisting}[language=Python,caption={Connection URL construction}]
+return (
+    f"mysql+pymysql://{user}:{password}@{settings.db_host}:{settings.db_port}/"
+    f"{settings.db_name}?charset=utf8mb4"
+)
+\end{lstlisting}
+
+\subsection{Engine and Session Lifecycle}
+\begin{itemize}
+  \item Lazy singleton engine creation in \texttt{get\_engine()}.
+  \item Connection resilience via \texttt{pool\_pre\_ping=True} and \texttt{pool\_recycle=300}.
+  \item Per-request session from \texttt{sessionmaker}, then session closed in \texttt{finally}.
+\end{itemize}
+
+\subsection{Metadata Reflection Strategy}
+Instead of hardcoding ORM models per table, backend reflects metadata at runtime and fetches tables by name. This enables generic CRUD for all entities with one route pattern.
+
+\section{Authentication and Authorization Internals}
+\subsection{Auth Model}
+\begin{itemize}
+  \item OAuth2 bearer token in request header.
+  \item JWT payload contains \texttt{sub}, \texttt{role}, \texttt{exp}.
+  \item Password verification with passlib \texttt{pbkdf2\_sha256}.
+\end{itemize}
+
+\subsection{Seeded Demo Accounts}
+\begin{itemize}
+  \item admin / Admin@123 (role: admin)
+  \item manager / Manager@123 (role: manager)
+  \item viewer / Viewer@123 (role: viewer)
+\end{itemize}
+
+\subsection{Role Guards}
+\begin{itemize}
+  \item READ roles: admin, manager, viewer
+  \item WRITE roles: admin, manager
+  \item DELETE role: admin only
+\end{itemize}
+
+\section{Frontend Process Flow from Scratch}
+\subsection{Router and Guards}
+\begin{itemize}
+  \item \texttt{/login} is wrapped in \texttt{LoginOnly}.
+  \item Main app routes are wrapped in \texttt{RequireAuth}.
+  \item Unauthorized users are redirected to login.
+\end{itemize}
+
+\subsection{API Wrapper Behavior}
+\begin{lstlisting}[language={},caption={Auth token injection in api.ts}]
+if (!skipAuth && authToken && !headers.has("Authorization")) {
+  headers.set("Authorization", `Bearer ${authToken}`);
+}
+\end{lstlisting}
+
+\subsection{Session Persistence}
+AuthProvider stores token and user in localStorage and refreshes profile from \texttt{/auth/me} on app bootstrap.
+
+\section{Complete API Inventory and Operations}
+\subsection{Core Endpoints}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.36\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth}}
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Access} & \textbf{Purpose} \\
+\midrule
+\endhead
+GET & /health & Public & Service health probe \\
+POST & /auth/login & Public & Issue JWT token \\
+GET & /auth/me & Any authenticated role & Current user profile \\
+GET & /api/\{entity\} & read roles & List records \\
+GET & /api/\{entity\}/\{id\} & read roles & Get single record \\
+POST & /api/\{entity\} & write roles & Create record \\
+PUT & /api/\{entity\}/\{id\} & write roles & Update record \\
+DELETE & /api/\{entity\}/\{id\} & admin & Delete record \\
+\bottomrule
+\end{longtable}
+
+Supported entities in generic CRUD:
+\begin{itemize}
+  \item staff, courses, students, halls, apartments
+  \item rooms, leases, invoices, next-of-kin, inspections
+\end{itemize}
+
+\subsection{Report Endpoints (a to n)}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.05\textwidth} >{\raggedright\arraybackslash}p{0.45\textwidth} >{\raggedright\arraybackslash}p{0.42\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Endpoint} & \textbf{SQL View} \\
+\midrule
+\endhead
+a & /api/reports/hall-managers & v\_hall\_managers \\
+b & /api/reports/student-leases & v\_student\_leases \\
+c & /api/reports/summer-leases & v\_summer\_leases \\
+d & /api/reports/student-rent-paid/\{banner\_id\} & v\_student\_rent\_paid \\
+e & /api/reports/unpaid-invoices?due\_before=... & v\_unpaid\_invoices \\
+f & /api/reports/unsatisfactory-inspections & v\_unsatisfactory\_inspections \\
+g & /api/reports/hall-student-rooms/\{hall\_id\} & v\_hall\_student\_rooms \\
+h & /api/reports/waiting-list & v\_waiting\_list \\
+i & /api/reports/student-category-counts & v\_student\_category\_counts \\
+j & /api/reports/students-without-kin & v\_students\_without\_kin \\
+k & /api/reports/student-adviser/\{banner\_id\} & v\_student\_advisers \\
+l & /api/reports/rent-stats & v\_hall\_rent\_stats \\
+m & /api/reports/hall-place-counts & v\_hall\_place\_counts \\
+n & /api/reports/senior-staff & v\_senior\_staff \\
+\bottomrule
+\end{longtable}
+
+\section{API Calling Examples (Complete Operational Coverage)}
+\subsection{Step 1: Login and Capture Token}
+\begin{lstlisting}[language={},caption={Authenticate and obtain bearer token}]
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@123"}'
+\end{lstlisting}
+
+\subsection{Step 2: Read Current User Profile}
+\begin{lstlisting}[language={}]
+curl http://localhost:8000/auth/me \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\subsection{Step 3: CRUD Operations Example (students)}
+\begin{lstlisting}[language={},caption={Create student}]
+curl -X POST http://localhost:8000/api/students \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "banner_id":"B00999999",
+    "first_name":"Aanya",
+    "last_name":"Sharma",
+    "street":"1 Main St",
+    "city":"London",
+    "postcode":"SW1A 1AA",
+    "dob":"2003-06-21",
+    "gender":"Female",
+    "category":"Postgraduate",
+    "nationality":"Indian",
+    "status":"Waiting",
+    "major":"Computer Science"
+  }'
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={List students}]
+curl http://localhost:8000/api/students \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Get one student}]
+curl http://localhost:8000/api/students/B00999999 \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Update student}]
+curl -X PUT http://localhost:8000/api/students/B00999999 \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"Placed"}'
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Delete student (admin only)}]
+curl -X DELETE http://localhost:8000/api/students/B00999999 \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\subsection{Step 4: Report API Examples}
+\begin{lstlisting}[language={},caption={Report e: unpaid invoices up to date}]
+curl "http://localhost:8000/api/reports/unpaid-invoices?due_before=2026-12-31" \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Report g: hall student rooms}]
+curl http://localhost:8000/api/reports/hall-student-rooms/1 \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Report n: senior staff}]
+curl http://localhost:8000/api/reports/senior-staff \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+\section{Detailed Internal Process Flows}
+\subsection{Flow A: Login Process}
+\begin{enumerate}
+  \item User submits credentials from \texttt{LoginPage}.
+  \item Frontend calls \texttt{apiPost("/auth/login", ...)} with \texttt{skipAuth=true}.
+  \item FastAPI route \texttt{/auth/login} calls \texttt{authenticate\_user()}.
+  \item Password is verified with passlib hash.
+  \item On success, JWT is generated by \texttt{create\_access\_token()}.
+  \item Frontend persists token + profile and sets API auth token in memory.
+\end{enumerate}
+
+\subsection{Flow B: Generic Create Operation}
+\begin{enumerate}
+  \item Request hits \texttt{POST /api/\{entity\}}.
+  \item Entity key is validated against \texttt{TABLE\_CONFIG}.
+  \item SQLAlchemy reflected table is fetched with \texttt{get\_table()}.
+  \item Payload is sanitized and type-normalized by column type.
+  \item SQL \texttt{INSERT} is executed.
+  \item \texttt{\_safe\_commit()} commits transaction or rolls back on error.
+  \item Created row is re-fetched and returned.
+\end{enumerate}
+
+\subsection{Flow B1: Generic List Route for Each Entity (\texttt{GET /api/\{entity\}})}
+Exact backend implementation:
+\begin{lstlisting}[language=Python,caption={Generic list route used for every entity}]
+@app.get("/api/{entity}")
+def list_records(
+    entity: str,
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
+    config = _entity_config(entity)
+    table = get_table(config["table"])
+
+    query = select(table)
+    pk_name = config["pk"]
+    if pk_name in table.c:
+        query = query.order_by(table.c[pk_name])
+
+    rows = session.execute(query).mappings().all()
+    return _encode([dict(row) for row in rows])
+\end{lstlisting}
+
+Entity-specific behavior is derived from \texttt{TABLE\_CONFIG}:
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth} >{\raggedright\arraybackslash}p{0.14\textwidth} >{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.33\textwidth}}
+\toprule
+\textbf{Entity URL Key} & \textbf{DB Table} & \textbf{PK Used for Sort} & \textbf{ID Type} & \textbf{Runtime Result in List Route} \\
+\midrule
+\endhead
+staff & staff & staff\_id & int & \texttt{SELECT * FROM staff ORDER BY staff\_id} \\
+courses & courses & course\_number & str & \texttt{SELECT * FROM courses ORDER BY course\_number} \\
+students & students & banner\_id & str & \texttt{SELECT * FROM students ORDER BY banner\_id} \\
+halls & halls & hall\_id & int & \texttt{SELECT * FROM halls ORDER BY hall\_id} \\
+apartments & apartments & apartment\_id & int & \texttt{SELECT * FROM apartments ORDER BY apartment\_id} \\
+rooms & rooms & place\_number & int & \texttt{SELECT * FROM rooms ORDER BY place\_number} \\
+leases & leases & lease\_id & int & \texttt{SELECT * FROM leases ORDER BY lease\_id} \\
+invoices & invoices & invoice\_id & int & \texttt{SELECT * FROM invoices ORDER BY invoice\_id} \\
+next-of-kin & next\_of\_kin & kin\_id & int & \texttt{SELECT * FROM next\_of\_kin ORDER BY kin\_id} \\
+inspections & inspections & inspection\_id & int & \texttt{SELECT * FROM inspections ORDER BY inspection\_id} \\
+\bottomrule
+\end{longtable}
+
+Step-by-step runtime behavior for each request:
+\begin{enumerate}
+  \item \texttt{entity} path value is validated by \texttt{\_entity\_config(entity)}.
+  \item Table name and PK are resolved from \texttt{TABLE\_CONFIG}.
+  \item Reflected table object is loaded via \texttt{get\_table(config["table"])}.
+  \item \texttt{select(table)} query object is created.
+  \item PK-based deterministic ordering is appended: \texttt{ORDER BY <pk>}.
+  \item SQL is executed with \texttt{session.execute(query)}.
+  \item Rows are materialized as mapping dictionaries.
+  \item Payload is JSON-encoded via \texttt{\_encode(...)} and returned to frontend.
+\end{enumerate}
+
+\subsection{Flow C: Report Query Execution}
+\begin{enumerate}
+  \item Frontend chooses report metadata from \texttt{reports.ts}.
+  \item Endpoint is built (path and query params).
+  \item FastAPI report route runs SQL text against a view.
+  \item \texttt{session.execute(text(sql), params)} returns row mappings.
+  \item Rows are converted to dictionaries and encoded as JSON.
+\end{enumerate}
+
+\section{How Type Normalization and Validation Work}
+Before writes, backend coerces values according to SQL type:
+\begin{itemize}
+  \item Date columns: strict \texttt{YYYY-MM-DD}
+  \item DateTime columns: ISO datetime parsing
+  \item Boolean columns: true/false, 1/0, yes/no parsing
+  \item Integer and numeric fields: explicit casting
+\end{itemize}
+
+If parsing fails, API returns 400 with field-specific message.
+
+\section{Error Handling Strategy}
+\subsection{Constraint and Integrity Mapping}
+\texttt{\_map\_integrity\_error} maps common MySQL errors:
+\begin{itemize}
+  \item 1062: duplicate key \(\rightarrow\) 409 conflict
+  \item 1452: invalid foreign key reference \(\rightarrow\) 400 bad request
+  \item 3819 / 1644 / 1406: validation or trigger issues \(\rightarrow\) 400 bad request
+\end{itemize}
+
+\subsection{Transaction Safety}
+\texttt{\_safe\_commit()} guarantees:
+\begin{itemize}
+  \item commit on success
+  \item rollback on any SQLAlchemy error
+  \item mapped HTTP errors returned to client
+\end{itemize}
+
+\section{ACID Properties: Theory and Implementation in This Project}
+\subsection{Important Clarification}
+ACID is guaranteed by the database engine (MySQL/InnoDB), not by SQLAlchemy alone. SQLAlchemy provides transaction management APIs that correctly use DB transactions.
+
+\subsection{A - Atomicity}
+\begin{itemize}
+  \item Each write request is transactional.
+  \item If any step fails, rollback happens, so partial writes are avoided.
+\end{itemize}
+
+\subsection{C - Consistency}
+\begin{itemize}
+  \item Enforced by schema constraints, FKs, checks, and triggers.
+  \item Invalid states (e.g., room with both hall and apartment) are blocked.
+\end{itemize}
+
+\subsection{I - Isolation}
+\begin{itemize}
+  \item MySQL transaction isolation is applied per connection/session.
+  \item Concurrent transactions are isolated according to DB isolation level.
+\end{itemize}
+
+\subsection{D - Durability}
+\begin{itemize}
+  \item Once commit succeeds, data persists in MySQL storage engine.
+  \item Server restarts do not lose committed data.
+\end{itemize}
+
+\subsection{Practical Note on SQLAlchemy}
+SQLAlchemy provides:
+\begin{itemize}
+  \item session boundaries
+  \item commit and rollback orchestration
+  \item connection pooling and retries
+\end{itemize}
+But data durability and strict ACID guarantees are still fundamentally DB responsibilities.
+
+\section{Code-Level Examples from Real Project}
+\subsection{FastAPI Route Example}
+\begin{lstlisting}[language=Python,caption={Report route structure}]
+@app.get("/api/reports/hall-managers")
+def report_hall_managers(
+    _: AuthUser = Depends(READ_ROLES),
+    session: Session = Depends(get_session),
+) -> Any:
+    sql = """
+        SELECT hall_id, hall_name, manager_name, manager_phone
+        FROM v_hall_managers
+        ORDER BY hall_id
+    """
+    return _encode(_run_report(session, sql))
+\end{lstlisting}
+
+\subsection{Generic CRUD Example}
+\begin{lstlisting}[language=Python,caption={List route used for all entities}]
+@app.get("/api/{entity}")
+def list_records(entity: str, _: AuthUser = Depends(READ_ROLES), session: Session = Depends(get_session)) -> Any:
+    config = _entity_config(entity)
+    table = get_table(config["table"])
+    query = select(table)
+    rows = session.execute(query).mappings().all()
+    return _encode([dict(row) for row in rows])
+\end{lstlisting}
+
+\subsection{Frontend API Wrapper Example}
+\begin{lstlisting}[language={},caption={Single API helper used by all pages}]
+export async function apiRequest<T>(path: string, init: ApiRequestOptions = {}): Promise<T> {
+  const { skipAuth = false, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers ?? {});
+
+  if (!skipAuth && authToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${authToken}`);
+  }
+
+  const response = await fetch(buildUrl(path), { ...requestInit, headers });
+  const payload = await parseResponse(response);
+  if (!response.ok) {
+    throw new ApiError(response.status, asErrorMessage(payload, `Request failed with status ${response.status}`));
+  }
+  return payload as T;
+}
+\end{lstlisting}
+
+\section{Report Layer and DBMS Demonstration Value}
+This project is strong for DBMS presentation because report logic is encoded in SQL views and then consumed by API endpoints. This allows demonstration in both places:
+\begin{itemize}
+  \item Workbench: direct \texttt{SELECT * FROM v\_...}
+  \item Application: authenticated \texttt{/api/reports/...}
+\end{itemize}
+
+\section{Deep Execution Pipeline: From \texttt{app.get(...)} to \texttt{session.execute(...)}}
+\subsection{ASGI-to-Route Lifecycle (Exact Runtime Sequence)}
+For every request handled by a FastAPI route (for example \texttt{@app.get("/api/reports/hall-managers")}), the runtime path is:
+\begin{enumerate}
+  \item Uvicorn receives HTTP request and forwards it to the FastAPI ASGI app.
+  \item Starlette/FastAPI router matches path and method to a concrete handler.
+  \item FastAPI builds dependency graph for that handler.
+  \item Security dependency extracts bearer token (if endpoint is protected).
+  \item JWT is decoded and role is validated by \texttt{require\_roles(...)}.
+  \item DB dependency \texttt{get\_session()} yields a SQLAlchemy \texttt{Session}.
+  \item Route function executes Python logic and builds SQL expression/text.
+  \item \texttt{session.execute(...)} sends SQL through engine to PyMySQL driver.
+  \item MySQL executes query and returns rows/metadata.
+  \item Result is materialized with \texttt{.mappings().all()} or \texttt{.first()}.
+  \item Backend encodes payload through \texttt{jsonable\_encoder} and returns HTTP response.
+  \item Session dependency finalizer closes DB session.
+\end{enumerate}
+
+\subsection{How \texttt{app.get(...)} is Called Internally}
+When a route is declared with \texttt{@app.get("/api/...")}, FastAPI registers metadata for method/path/handler. At runtime, the decorator itself is not called again; instead, routing metadata is used to dispatch incoming requests to the associated function.
+
+\subsection{CRUD Query Object Construction (SQLAlchemy Core)}
+In generic CRUD routes, backend builds SQL objects before execution. Example pattern:
+\begin{lstlisting}[language=Python,caption={SQLAlchemy query object pipeline in CRUD}]
+config = _entity_config(entity)
+table = get_table(config["table"])
+
+query = select(table)
+pk_name = config["pk"]
+if pk_name in table.c:
+    query = query.order_by(table.c[pk_name])
+
+rows = session.execute(query).mappings().all()
+\end{lstlisting}
+
+Here, \texttt{query} is a SQLAlchemy expression object. It is compiled by the selected SQL dialect and then passed to the DBAPI driver at execution time.
+
+\subsection{Report Query Construction (Textual SQL + Bind Params)}
+In report routes, backend keeps SQL explicit and uses bind parameters:
+\begin{lstlisting}[language=Python,caption={Report execution helper path}]
+def _run_report(session: Session, sql: str, params: dict[str, Any] | None = None):
+    rows = session.execute(text(sql), params or {}).mappings().all()
+    return [dict(row) for row in rows]
+\end{lstlisting}
+
+This path preserves query readability for DBMS demos while still using SQLAlchemy session management and parameter binding.
+
+\subsection{Write Operations and Transactions}
+For \texttt{POST/PUT/DELETE}, the execution pattern is:
+\begin{enumerate}
+  \item Build \texttt{insert/update/delete} object.
+  \item Execute with \texttt{session.execute(...)}.
+  \item Call \texttt{\_safe\_commit()}.
+  \item On integrity/SQL errors: rollback + mapped HTTP exception.
+\end{enumerate}
+
+\section{All Views Explained in Detail (Complete Report Layer)}
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.29\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth}}
+\toprule
+\textbf{View} & \textbf{API Route} & \textbf{Columns Returned} & \textbf{Definition Logic / Source Tables} \\
+\midrule
+\endhead
+v\_hall\_managers & /api/reports/hall-managers & hall\_id, hall\_name, manager\_name, manager\_phone & \texttt{halls} JOIN \texttt{staff} on manager\_staff\_id; no filter \\
+
+v\_student\_leases & /api/reports/student-leases & lease\_id, banner\_id, student\_name, duration\_semesters, includes\_summer\_semester, date\_enter, date\_leave, place\_number, room\_number, monthly\_rent, residence\_type, residence\_name, residence\_address & \texttt{leases} + \texttt{students} + \texttt{rooms} + optional \texttt{halls/apartments} joins \\
+
+v\_summer\_leases & /api/reports/summer-leases & Same as \texttt{v\_student\_leases} & Derived from \texttt{v\_student\_leases}; filter \texttt{includes\_summer\_semester = TRUE} \\
+
+v\_student\_rent\_paid & /api/reports/student-rent-paid/\{banner\_id\} & banner\_id, student\_name, total\_paid & LEFT JOIN chain from \texttt{students -> leases -> invoices}; conditional SUM on paid invoices \\
+
+v\_unpaid\_invoices & /api/reports/unpaid-invoices & invoice\_id, lease\_id, banner\_id, student\_name, semester, amount\_due, due\_date, place\_number, room\_number, residence\_type, residence\_address & \texttt{invoices} JOIN \texttt{leases/students/rooms} + optional residence joins; filter \texttt{date\_paid IS NULL} \\
+
+v\_unsatisfactory\newline inspections & /api/reports/\newline unsatisfactory-inspections & inspection\_id, inspection\_date, staff\_name, apartment\_id, comments & \texttt{inspections} JOIN \texttt{staff}; filter \texttt{is\_satisfactory = FALSE} \\
+
+v\_hall\newline student\newline rooms & /api/reports/\newline hall-student-rooms/\{hall\_id\} & hall\_id, banner\_id, student\_name, hall\_name, room\_number, place\_number & \texttt{leases} JOIN \texttt{students/rooms/halls}; hall-scoped projection \\
+
+v\_waiting\_list & /api/reports/waiting-list & banner\_id, first\_name, last\_name, street, city, postcode, mobile\_phone, email, dob, gender, category, nationality, special\_needs, comments, status, major, minor, course\_number, advisor\_staff\_id & Direct projection from \texttt{students}; filter \texttt{status='Waiting'} \\
+
+v\_student\newline category\newline counts & /api/reports/\newline student-category-counts & category, student\_count & Group-by aggregate on \texttt{students.category} \\
+
+v\_students\newline without\newline kin & /api/reports/\newline students-without-kin & banner\_id, student\_name & \texttt{students} LEFT JOIN \texttt{next\_of\_kin}; filter rows with null kin\_id \\
+
+v\_student\_advisers & /api/reports/student-adviser/\{banner\_id\} & banner\_id, student\_name, adviser\_name, adviser\_phone & \texttt{students} LEFT JOIN adviser alias of \texttt{staff} \\
+
+v\_hall\_rent\_stats & /api/reports/rent-stats & min\_rent, max\_rent, avg\_rent & Aggregate over \texttt{rooms} where \texttt{hall\_id IS NOT NULL} \\
+
+v\_hall\_place\_counts & /api/reports/hall-place-counts & hall\_id, hall\_name, total\_places & \texttt{halls} LEFT JOIN \texttt{rooms}; grouped by hall \\
+
+v\_senior\_staff & /api/reports/senior-staff & staff\_id, staff\_name, age, location & \texttt{staff} with \texttt{TIMESTAMPDIFF(YEAR, dob, CURDATE()) > 60} \\
+\bottomrule
+\end{longtable}
+\endgroup
+
+\section{Complete Per-Table Technical Specification (All 10 Tables)}
+\subsection{\texttt{staff}}
+\begin{itemize}
+  \item \textbf{Columns:} staff\_id, first\_name, last\_name, email, street, city, postcode, dob, gender, position, department\_name, internal\_phone, room\_number, location, created\_at.
+  \item \textbf{Primary key:} staff\_id (AUTO\_INCREMENT).
+  \item \textbf{Unique constraints:} email.
+  \item \textbf{Foreign keys (outgoing):} none.
+  \item \textbf{Indexes:} PRIMARY(staff\_id), UNIQUE(email).
+  \item \textbf{Referenced by:} students(advisor\_staff\_id), halls(manager\_staff\_id), inspections(staff\_id).
+\end{itemize}
+
+\subsection{\texttt{courses}}
+\begin{itemize}
+  \item \textbf{Columns:} course\_number, course\_title, instructor\_name, instructor\_phone, instructor\_email, instructor\_room, department\_name, created\_at.
+  \item \textbf{Primary key:} course\_number.
+  \item \textbf{Foreign keys (outgoing):} none.
+  \item \textbf{Indexes:} PRIMARY(course\_number).
+  \item \textbf{Referenced by:} students(course\_number).
+\end{itemize}
+
+\subsection{\texttt{students}}
+\begin{itemize}
+  \item \textbf{Columns:} banner\_id, first\_name, last\_name, street, city, postcode, mobile\_phone, email, dob, gender, category, nationality, special\_needs, comments, status, major, minor, course\_number, advisor\_staff\_id, created\_at.
+  \item \textbf{Primary key:} banner\_id.
+  \item \textbf{Foreign keys (outgoing):}
+  \begin{itemize}
+    \item course\_number -> courses(course\_number), ON UPDATE CASCADE, ON DELETE SET NULL.
+    \item advisor\_staff\_id -> staff(staff\_id), ON UPDATE CASCADE, ON DELETE SET NULL.
+  \end{itemize}
+  \item \textbf{Indexes:} PRIMARY(banner\_id), idx\_students\_status(status), idx\_students\_category(category), idx\_students\_advisor\_staff\_id(advisor\_staff\_id).
+\end{itemize}
+
+\subsection{\texttt{halls}}
+\begin{itemize}
+  \item \textbf{Columns:} hall\_id, hall\_name, street, city, postcode, telephone, manager\_staff\_id, created\_at.
+  \item \textbf{Primary key:} hall\_id (AUTO\_INCREMENT).
+  \item \textbf{Foreign keys (outgoing):} manager\_staff\_id -> staff(staff\_id), ON UPDATE CASCADE, ON DELETE RESTRICT.
+  \item \textbf{Indexes:} PRIMARY(hall\_id), idx\_halls\_manager\_id(manager\_staff\_id).
+\end{itemize}
+
+\subsection{\texttt{apartments}}
+\begin{itemize}
+  \item \textbf{Columns:} apartment\_id, street, city, postcode, number\_of\_bedrooms, created\_at.
+  \item \textbf{Primary key:} apartment\_id (AUTO\_INCREMENT).
+  \item \textbf{Checks:} number\_of\_bedrooms IN (3,4,5).
+  \item \textbf{Foreign keys (outgoing):} none.
+  \item \textbf{Indexes:} PRIMARY(apartment\_id).
+\end{itemize}
+
+\subsection{\texttt{rooms}}
+\begin{itemize}
+  \item \textbf{Columns:} place\_number, room\_number, monthly\_rent, hall\_id, apartment\_id, created\_at.
+  \item \textbf{Primary key:} place\_number.
+  \item \textbf{Foreign keys (outgoing):}
+  \begin{itemize}
+    \item hall\_id -> halls(hall\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+    \item apartment\_id -> apartments(apartment\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+  \end{itemize}
+  \item \textbf{Checks:} monthly\_rent >= 0.
+  \item \textbf{Triggers:} \texttt{trg\_rooms\_before\_insert} and \texttt{trg\_rooms\_before\_update} enforce XOR parent rule (exactly one of hall\_id/apartment\_id).
+  \item \textbf{Indexes:} PRIMARY(place\_number), idx\_rooms\_hall\_id(hall\_id), idx\_rooms\_apartment\_id(apartment\_id).
+\end{itemize}
+
+\subsection{\texttt{leases}}
+\begin{itemize}
+  \item \textbf{Columns:} lease\_id, banner\_id, place\_number, duration\_semesters, includes\_summer\_semester, date\_enter, date\_leave, created\_at.
+  \item \textbf{Primary key:} lease\_id (AUTO\_INCREMENT).
+  \item \textbf{Foreign keys (outgoing):}
+  \begin{itemize}
+    \item banner\_id -> students(banner\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+    \item place\_number -> rooms(place\_number), ON UPDATE CASCADE, ON DELETE RESTRICT.
+  \end{itemize}
+  \item \textbf{Indexes:} PRIMARY(lease\_id), idx\_leases\_banner\_id(banner\_id), idx\_leases\_place\_number(place\_number), idx\_leases\_summer(includes\_summer\_semester).
+\end{itemize}
+
+\subsection{\texttt{invoices}}
+\begin{itemize}
+  \item \textbf{Columns:} invoice\_id, lease\_id, semester, amount\_due, due\_date, date\_paid, payment\_method, first\_reminder\_date, second\_reminder\_date, created\_at.
+  \item \textbf{Primary key:} invoice\_id (AUTO\_INCREMENT).
+  \item \textbf{Foreign keys (outgoing):} lease\_id -> leases(lease\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+  \item \textbf{Checks:} amount\_due >= 0.
+  \item \textbf{Indexes:} PRIMARY(invoice\_id), idx\_invoices\_lease\_id(lease\_id), idx\_invoices\_due\_date(due\_date), idx\_invoices\_date\_paid(date\_paid).
+\end{itemize}
+
+\subsection{\texttt{next\_of\_kin}}
+\begin{itemize}
+  \item \textbf{Columns:} kin\_id, banner\_id, name, relationship, street, city, postcode, phone, created\_at.
+  \item \textbf{Primary key:} kin\_id (AUTO\_INCREMENT).
+  \item \textbf{Unique constraints:} banner\_id (one-to-one-ish from students to kin rows).
+  \item \textbf{Foreign keys (outgoing):} banner\_id -> students(banner\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+  \item \textbf{Indexes:} PRIMARY(kin\_id), UNIQUE(banner\_id).
+\end{itemize}
+
+\subsection{\texttt{inspections}}
+\begin{itemize}
+  \item \textbf{Columns:} inspection\_id, apartment\_id, staff\_id, inspection\_date, is\_satisfactory, comments, created\_at.
+  \item \textbf{Primary key:} inspection\_id (AUTO\_INCREMENT).
+  \item \textbf{Foreign keys (outgoing):}
+  \begin{itemize}
+    \item apartment\_id -> apartments(apartment\_id), ON UPDATE CASCADE, ON DELETE CASCADE.
+    \item staff\_id -> staff(staff\_id), ON UPDATE CASCADE, ON DELETE RESTRICT.
+  \end{itemize}
+  \item \textbf{Indexes:} PRIMARY(inspection\_id), idx\_inspections\_apartment\_id(apartment\_id), idx\_inspections\_staff\_id(staff\_id), idx\_inspections\_sat(is\_satisfactory).
+\end{itemize}
+
+\section{Foreign Key Matrix (All Tables)}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth}}
+\toprule
+\textbf{Child Column} & \textbf{Parent Reference} & \textbf{ON UPDATE} & \textbf{ON DELETE} & \textbf{Purpose} \\
+\midrule
+\endhead
+students.course\_number & courses(course\_number) & CASCADE & SET NULL & Student-course mapping \\
+students.advisor\_staff\_id & staff(staff\_id) & CASCADE & SET NULL & Adviser relationship \\
+halls.manager\_staff\_id & staff(staff\_id) & CASCADE & RESTRICT & Hall manager assignment \\
+rooms.hall\_id & halls(hall\_id) & CASCADE & CASCADE & Room under hall \\
+rooms.apartment\_id & apartments(apartment\_id) & CASCADE & CASCADE & Room under apartment \\
+leases.banner\_id & students(banner\_id) & CASCADE & CASCADE & Lease owner \\
+leases.place\_number & rooms(place\_number) & CASCADE & RESTRICT & Occupancy place reference \\
+invoices.lease\_id & leases(lease\_id) & CASCADE & CASCADE & Billing tied to lease \\
+next\_of\_kin.banner\_id & students(banner\_id) & CASCADE & CASCADE & Emergency contact link \\
+inspections.apartment\_id & apartments(apartment\_id) & CASCADE & CASCADE & Apartment inspection link \\
+inspections.staff\_id & staff(staff\_id) & CASCADE & RESTRICT & Inspector accountability \\
+\bottomrule
+\end{longtable}
+
+\section{Index Catalog and Query Optimization Impact}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.26\textwidth}}
+\toprule
+\textbf{Index Name} & \textbf{Table} & \textbf{Columns} & \textbf{Typical API/Report Usage} \\
+\midrule
+\endhead
+PRIMARY & staff & staff\_id & Staff CRUD identity lookups \\
+UNIQUE(email) & staff & email & Avoid duplicate staff identities \\
+PRIMARY & courses & course\_number & Course CRUD identity lookups \\
+PRIMARY & students & banner\_id & Student CRUD identity lookups \\
+idx\_students\_status & students & status & \texttt{v\_waiting\_list} filter \\
+idx\_students\_category & students & category & \texttt{v\_student\_category\_counts} grouping efficiency \\
+idx\_students\_advisor\_staff\_id & students & advisor\_staff\_id & Adviser joins in \texttt{v\_student\_advisers} \\
+PRIMARY & halls & hall\_id & Hall CRUD identity lookups \\
+idx\_halls\_manager\_id & halls & manager\_staff\_id & Hall-manager joins \\
+PRIMARY & apartments & apartment\_id & Apartment CRUD identity lookups \\
+PRIMARY & rooms & place\_number & Room CRUD identity lookups \\
+idx\_rooms\_hall\_id & rooms & hall\_id & Hall room lookups and report generation \\
+idx\_rooms\_apartment\_id & rooms & apartment\_id & Apartment-based joins in inspections and invoices views \\
+PRIMARY & leases & lease\_id & Lease CRUD identity lookups \\
+idx\_leases\_banner\_id & leases & banner\_id & Student lease history, rent-paid aggregates \\
+idx\_leases\_place\_number & leases & place\_number & Place occupancy joins \\
+idx\_leases\_summer & leases & includes\_summer\_semester & Summer lease filtering \\
+PRIMARY & invoices & invoice\_id & Invoice CRUD identity lookups \\
+idx\_invoices\_lease\_id & invoices & lease\_id & Lease-invoice join path \\
+idx\_invoices\_due\_date & invoices & due\_date & Due-date filtering in unpaid invoices report \\
+idx\_invoices\_date\_paid & invoices & date\_paid & Paid/unpaid partition scans \\
+PRIMARY & next\_of\_kin & kin\_id & Next-of-kin CRUD identity lookups \\
+UNIQUE(banner\_id) & next\_of\_kin & banner\_id & Enforces max one kin row per student \\
+PRIMARY & inspections & inspection\_id & Inspection CRUD identity lookups \\
+idx\_inspections\_apartment\_id & inspections & apartment\_id & Apartment inspection history joins \\
+idx\_inspections\_staff\_id & inspections & staff\_id & Inspector-based filtering \\
+idx\_inspections\_sat & inspections & is\_satisfactory & Unsatisfactory inspection report filter \\
+\bottomrule
+\end{longtable}
+
+\section{Deployment and Runtime Notes}
+\subsection{Local Execution}
+\begin{enumerate}
+  \item Apply schema to MySQL and optional seed.
+  \item Configure backend \texttt{backend/.env}.
+  \item Run backend with Uvicorn and frontend with Vite.
+\end{enumerate}
+
+\subsection{Cloud Split Deployment}
+\begin{itemize}
+  \item Frontend: Vercel or Netlify
+  \item Backend: Render or Railway
+  \item Database: MySQL provider (Aiven / Railway / other managed MySQL)
+\end{itemize}
+
+\subsection{TLS and Managed DB Logs}
+Startup messages such as "ready for connections" and "TLS enabled" indicate healthy DB startup. Self-signed CA warning is common for managed instances and handled by TLS mode/cert configuration.
+
+\section{Testing and Quality Assurance}
+\subsection{Route-Level Tests}
+\begin{lstlisting}[language={}]
+source .venv/bin/activate
+PYTHONPATH=backend python -m pytest backend/tests -q
+\end{lstlisting}
+
+\subsection{Runtime Smoke Test}
+\begin{lstlisting}[language={}]
+source .venv/bin/activate
+python backend/tests/runtime_smoke.py
+\end{lstlisting}
+
+\subsection{What Is Validated}
+\begin{itemize}
+  \item endpoint availability
+  \item auth behavior and token flow
+  \item CRUD/report response correctness
+\end{itemize}
+
+\section{Known Constraints and Future Improvements}
+\begin{itemize}
+  \item Current CORS policy is open; production should restrict origins.
+  \item Demo users are in-memory seeded; production should store users in DB.
+  \item Add stored procedures/functions if rubric explicitly requires them.
+  \item Add advanced auditing, pagination, and rate limiting.
+\end{itemize}
+
+\section{Final Conclusion}
+This project is a complete DBMS-focused software system that demonstrates relational modeling, integrity controls, transactional correctness, secure service APIs, and practical frontend integration.
+
+From first user action to committed row, the flow is fully traceable:
+\begin{enumerate}
+  \item typed frontend interaction
+  \item authenticated API call
+  \item validated backend logic
+  \item transactional SQL execution
+  \item consistent and durable relational state
+\end{enumerate}
+
+It therefore satisfies both engineering and academic DBMS expectations: normalized schema design, ACID-aware operations, SQL reporting via views, and end-to-end application delivery.
+
+\appendix
+\section{Full Report Endpoint Quick List}
+\begin{lstlisting}[language={}]
+GET /api/reports/hall-managers
+GET /api/reports/student-leases
+GET /api/reports/summer-leases
+GET /api/reports/student-rent-paid/{banner_id}
+GET /api/reports/unpaid-invoices?due_before=YYYY-MM-DD
+GET /api/reports/unsatisfactory-inspections
+GET /api/reports/hall-student-rooms/{hall_id}
+GET /api/reports/waiting-list
+GET /api/reports/student-category-counts
+GET /api/reports/students-without-kin
+GET /api/reports/student-adviser/{banner_id}
+GET /api/reports/rent-stats
+GET /api/reports/hall-place-counts
+GET /api/reports/senior-staff
+\end{lstlisting}
+
+\section{Generic CRUD Pattern Quick List}
+\begin{lstlisting}[language={}]
+GET    /api/{entity}
+GET    /api/{entity}/{record_id}
+POST   /api/{entity}
+PUT    /api/{entity}/{record_id}
+DELETE /api/{entity}/{record_id}
+\end{lstlisting}
+
+\end{document}

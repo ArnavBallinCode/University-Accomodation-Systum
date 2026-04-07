@@ -12,7 +12,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_ROOT / ".env")
 load_dotenv(override=False)
 
-
+# Database table names to reflect in metadata. Adjust as needed.
 @dataclass(frozen=True)
 class Settings:
     db_host: str

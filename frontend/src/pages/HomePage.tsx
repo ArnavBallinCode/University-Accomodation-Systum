@@ -83,7 +83,7 @@ export function HomePage(): JSX.Element {
           transition={{ delay: 0.08 }}
           className="mt-5 max-w-4xl font-heading text-4xl font-black leading-tight text-slate-900 md:text-6xl"
         >
-          Blast through accommodation ops with a multi-page, animation-heavy command universe.
+          Blast through University Accommodation Management systems.
         </motion.h2>
 
         <motion.p
